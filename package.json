@@ -1,0 +1,10 @@
+{
+  "name": "cs2-clipper",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
