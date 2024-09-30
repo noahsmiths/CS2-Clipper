@@ -10,7 +10,7 @@ if (await configFile.exists() == false) {
 
 const config = await configFile.json();
 
-launchHLAE({HLAE_path: config.HLAE_path, CS_path: config.CS_path})
+launchHLAE(config.HLAE_path, config.CS_path, config.telnet_port)
     .then(() => {
         console.log("CS2 Closed without error");
     })

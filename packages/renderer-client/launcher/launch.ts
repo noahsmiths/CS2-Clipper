@@ -4,10 +4,10 @@ import path from "node:path";
 
 const exec = promisify(exec_original);
 
-export function launchHLAE({ HLAE_path, CS_path }: { HLAE_path: string, CS_path: string }) {
-    const HLAEExecutablePath = path.join(HLAE_path, "HLAE.exe");
-    const HLAESource2HookPath = path.join(HLAE_path, "x64/AfxHookSource2.dll")
-    const CS2ExecutablePath = path.join(CS_path, "bin/win64/cs2.exe");
+export function launchHLAE(HLAEPath: string, CSPath: string, port: number) {
+    const HLAEExecutablePath = path.join(HLAEPath, "HLAE.exe");
+    const HLAESource2HookPath = path.join(HLAEPath, "x64/AfxHookSource2.dll")
+    const CS2ExecutablePath = path.join(CSPath, "bin/win64/cs2.exe");
 
     const HLAEArgs = [
         `"${HLAEExecutablePath}"`,
@@ -19,7 +19,7 @@ export function launchHLAE({ HLAE_path, CS_path }: { HLAE_path: string, CS_path:
         "-programPath",
         `"${CS2ExecutablePath}"`,
         "-cmdLine",
-        `"-steam -insecure +sv_lan 1 -window -console -game csgo -tools -netconport 2222 -noassetbrowser"`];
+        `"-steam -insecure +sv_lan 1 -window -console -game csgo -tools -netconport ${port} -noassetbrowser"`];
 
     // Must run in a shell via exec. Errors when using execFile
     return exec(HLAEArgs.join(" "));
