@@ -1,3 +1,5 @@
+import { launchHLAE } from "./launcher/launch";
+
 const CONFIG_FILE_PATH = "./config.json";
 const configFile = Bun.file(CONFIG_FILE_PATH);
 
@@ -7,3 +9,12 @@ if (await configFile.exists() == false) {
 }
 
 const config = await configFile.json();
+
+launchHLAE({HLAE_path: config.HLAE_path, CS_path: config.CS_path})
+    .then(() => {
+        console.log("HLAE Success");
+    })
+    .catch((err) => {
+        console.error("HLAE ERROR", err);
+    });
+
