@@ -21,6 +21,6 @@ export function launchHLAE({ HLAE_path, CS_path }: { HLAE_path: string, CS_path:
         "-cmdLine",
         `"-steam -insecure +sv_lan 1 -window -console -game csgo -tools -netconport 2222 -noassetbrowser"`];
 
-    // Must run in a shell. Errors when using execFile
+    // Must run in a shell via exec. Errors when using execFile
     return exec(HLAEArgs.join(" "));
 }
