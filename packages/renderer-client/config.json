@@ -1,6 +1,5 @@
 {
     "HLAE_path": "",
     "CS_path": "",
-    "renderer_server_socket_url": "",
-    "telnet_port": 2222
+    "renderer_server_socket_url": ""
 }
