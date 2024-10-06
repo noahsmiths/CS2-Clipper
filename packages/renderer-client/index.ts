@@ -1,5 +1,4 @@
-import { launchHLAE } from "./launcher/launch";
-import { waitForLaunch } from "./telnet/CSBridge";
+import { HLAE } from "./hlae/HLAE";
 
 const CONFIG_FILE_PATH = "./config.json";
 const configFile = Bun.file(CONFIG_FILE_PATH);
@@ -11,7 +10,9 @@ if (await configFile.exists() == false) {
 
 const config = await configFile.json();
 
-launchHLAE(config.HLAE_path, config.CS_path, config.telnet_port)
+const hlae = new HLAE(config.HLAE_path, config.CS_path);
+
+hlae.launch()
     .then(() => {
         console.log("CS2 Closed without error");
     })
@@ -20,9 +21,3 @@ launchHLAE(config.HLAE_path, config.CS_path, config.telnet_port)
     });
 
 console.log("launching");
-const connection = await waitForLaunch(config.telnet_port);
-console.log("Launched!");
-
-connection.on('data', (chunk) => {
-    console.log(chunk.toString());
-});
