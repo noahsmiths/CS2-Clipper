@@ -8,10 +8,6 @@
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
-  "dependencies": {
-    "socket.io-client": "^4.8.0",
-    "telnet-client": "^2.2.1"
-  },
   "scripts": {
     "build": "bun build ./hlae/mirv-scripts/mirvBridge.ts --outfile ./hlae/mirv-scripts/build/mirvBridge.mjs --watch"
   }
