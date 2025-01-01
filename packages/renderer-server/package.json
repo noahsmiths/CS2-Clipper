@@ -3,12 +3,15 @@
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/globaloffensive": "^2.3.4",
+    "@types/steam-user": "^5.0.4"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "globaloffensive": "^3.2.0"
+    "globaloffensive": "^3.2.0",
+    "steam-user": "^5.2.0"
   }
 }

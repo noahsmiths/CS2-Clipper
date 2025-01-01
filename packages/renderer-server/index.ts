@@ -1,1 +1,3 @@
-console.log("Hello via Bun!");
+import { MatchFetcher } from "./matches/MatchFetcher";
+
+const matchFetcher = MatchFetcher.createMatchFetcher();
