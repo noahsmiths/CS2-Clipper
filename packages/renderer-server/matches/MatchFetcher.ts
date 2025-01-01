@@ -39,10 +39,10 @@ export class MatchFetcher {
             user.once("error", rej);
 
             user.once("loggedOn", () => {
-                user.removeAllListeners("error");
-
                 const game = new GlobalOffensive(user);
                 game.once("connectedToGC", () => {
+                    user.removeAllListeners("error");
+                    
                     res(new MatchFetcher(user, game));
                 });
 
