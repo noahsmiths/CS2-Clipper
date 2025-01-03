@@ -1,0 +1,11 @@
+{
+  "name": "shared",
+  "module": "index.ts",
+  "type": "module",
+  "dependencies": {
+    "unbzip2-stream": "^1.4.3"
+  },
+  "devDependencies": {
+    "@types/unbzip2-stream": "^1.4.3"
+  }
+}
