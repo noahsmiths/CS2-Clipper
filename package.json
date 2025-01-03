@@ -5,7 +5,8 @@
     "@types/bun": "latest"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "true"
   ],
   "trustedDependencies": [
     "protobufjs"

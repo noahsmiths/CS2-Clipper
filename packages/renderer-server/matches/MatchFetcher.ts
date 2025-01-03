@@ -7,8 +7,31 @@ export class MatchFetcher {
         private game: GlobalOffensive
     ) {}
 
+    getDemoURLFromMatchId(matchId: string): Promise<string> {
+        this.game.requestGame(matchId);
+
+        return new Promise((res, rej) => {
+            this.game.once("matchList", (matches) => {
+                if (matches.length === 0) {
+                    rej("matchList event got no matches. This can be caused by an invalid match code.");
+                    return;
+                }
+
+                const roundsWithReplayURL = matches[0].roundstatsall.filter(round => round.map !== null);
+
+                if (roundsWithReplayURL.length > 0) {
+                    res(roundsWithReplayURL[0].map!);
+                } else {
+                    rej("No round found with a non-null 'map' property.");
+                }
+            });
+        });
+    }
+
     static async createMatchFetcher(accountName?: string, password?: string, twoFactorCode?: string): Promise<MatchFetcher> {
-        const user = new SteamUser();
+        const user = new SteamUser({
+            webCompatibilityMode: true
+        });
         
         let logonDetails: any;
         if (process.env.REFRESH_TOKEN) {
@@ -27,11 +50,9 @@ export class MatchFetcher {
             };
         }
 
-        user.logOn(logonDetails);
-
         user.once("refreshToken", (token) => {
             if (!logonDetails.refreshToken) {
-                console.log(`Logged on without refresh token. Save this new one in an environment variable called REFRESH_TOKEN:\n${token}`);
+                console.log(`Got new refresh token. Save this new one in an environment variable called REFRESH_TOKEN:\n${token}`);
             }
         });
 
@@ -41,13 +62,15 @@ export class MatchFetcher {
             user.once("loggedOn", () => {
                 const game = new GlobalOffensive(user);
                 game.once("connectedToGC", () => {
-                    user.removeAllListeners("error");
-                    
+                    user.removeListener("error", rej);
+
                     res(new MatchFetcher(user, game));
                 });
 
                 user.gamesPlayed([730], true);
             });
+
+            user.logOn(logonDetails);
         })
     }
 }
