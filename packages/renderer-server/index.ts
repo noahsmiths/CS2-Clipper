@@ -10,7 +10,5 @@ const matchFetcher = await MatchFetcher.createMatchFetcher();
 // await downloadBZip2(matchURL, "./demo.dem");
 // console.log("Done");
 
-performance.mark("demoparser-start");
 const deaths = parseEvent("./demo.dem", "player_death", [], ["is_warmup_period"]).filter((event: any) => !event.is_warmup_period);
-performance.mark("demoparser-end");
 console.log(deaths);
