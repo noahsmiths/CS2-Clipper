@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@laihoe/demoparser2": "^0.33.1",
-    "demofile": "^2.10.0",
     "dotenv": "^16.4.7",
     "globaloffensive": "^3.2.0",
     "steam-user": "^5.2.0",

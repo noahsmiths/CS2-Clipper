@@ -9,7 +9,7 @@ export function downloadBZip2(url: string, destinationPath: string): Promise<voi
 
             response.pipe(bz2()).pipe(writeStream);
 
-            writeStream.once("close", resolve);
+            writeStream.once("close", resolve); // Must close on writestream, not response, or else some bytes can get lost
             response.once("error", reject);
         })
         .once("error", reject);
