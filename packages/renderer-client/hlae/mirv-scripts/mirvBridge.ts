@@ -28,7 +28,26 @@ async function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}) 
     mirv.exec(`mirv_streams record fps ${demo.fps}`);
     mirv.exec(`mirv_streams record screen enabled 1`);
     mirv.exec(`mirv_streams record startMovieWav 1`);
+    // mirv.exec(`mirv_streams settings add ffmpeg mp4 "-c:v libx264 -pix_fmt yuv420p -preset ultrafast -crf 9 {QUOTE}{AFX_STREAM_PATH}\\video.mp4{QUOTE}"`);
+    // mirv.exec(`mirv_streams settings add sampler blur`);
+    // mirv.exec(`mirv_streams settings edit blur settings mp4`);
+    // mirv.exec(`mirv_streams settings edit blur strength 1`);
+    // mirv.exec(`mirv_streams settings edit blur method rectangle`);
+    // mirv.exec(`mirv_streams settings edit blur exposure ${(0.7 * (demo.fps / 60)).toFixed(2)}`);
+    // mirv.exec(`mirv_streams settings edit blur fps ${demo.fps}`);
+    // mirv.exec(`mirv_streams record fps ${demo.fps * 10}`);
+    // mirv.exec(`mirv_streams record screen settings blur`);
     mirv.exec(`mirv_streams record screen settings afxFfmpeg`);
+    mirv.exec(`cl_draw_only_deathnotices true`);
+    mirv.exec(`spec_show_xray 0`);
+    mirv.exec(`snd_setmixer Dialog vol 0`);
+    mirv.exec(`cl_drawhud_force_teamid_overhead -1`);
+    mirv.exec(`cl_player_ping_mute 2`);
+    mirv.exec(`cl_spec_show_bindings false`);
+    mirv.exec(`mp_display_kill_assists false`);
+    mirv.exec(`mirv_viewmodel enabled 1; mirv_viewmodel set 2 0 -2 68 0`);
+    mirv.exec(`mirv_deathmsg filter clear`);
+    mirv.exec(`mirv_deathmsg filter add attackerMatch=!xTrace block=1 lastRule=1`);
 
     mirv.exec(`playdemo ${demo.id}`);
 
@@ -36,6 +55,7 @@ async function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}) 
     mirv.exec(`demoui`);
 
     for (let i = 0; i < demo.clipIntervals.length; i++) {
+        mirv.exec(`mirv_deathmsg clear`);
         mirv.exec(`mirv_cmd clear`);
         mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start - 96} spec_player ${demo.clipIntervals[i].playerName}`);
         mirv.exec(`demo_gototick ${demo.clipIntervals[i].start - 96}`); // Go to 1.5 seconds before clip start
@@ -47,6 +67,7 @@ async function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}) 
     }
 
     mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[demo.clipIntervals.length - 1].end + 128} disconnect`); // Disconnect 2 seconds after done
+    mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[demo.clipIntervals.length - 1].end + 128} mirv_cmd clear`);
     mirv.exec(`demo_resume`);
 }
 

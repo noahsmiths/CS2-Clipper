@@ -6,7 +6,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import mirvBridge from "./mirv-scripts/build/mirvBridge.mjs" with { type: "file" };
 import { downloadBZip2 } from "../../shared/utils/BZip2Downloader";
 import { FFMpeg } from "./FFMpeg";
-import { readdir } from "node:fs/promises";
+import { exists, readdir } from "node:fs/promises";
 import { rimraf } from "rimraf";
 
 export class HLAE {
@@ -33,7 +33,7 @@ export class HLAE {
     }
 
     private writeMirvScript(): Promise<void> {
-        return new Promise(async (res, rej) => {
+        return new Promise(async (res) => {
             const mirvBridgeFile = Bun.file(mirvBridge);
 
             await Bun.write(this.cs2MirvBridgePath, mirvBridgeFile);
@@ -72,12 +72,24 @@ export class HLAE {
             wss.on("connection", (ws) => {
                 this.CS2WebSocket = ws;
     
-                ws.on("error", (err) => {
+                ws.on("error", async (err) => {
                     console.error(err);
-                    console.log("Exiting due to websocket error...");
-    
-                    this.exitCS2();
-                    process.exit(1);
+                    console.log("Websocket error. Restarting CS2...");
+
+                    wss.close();
+                    this.CS2WebSocket = null;
+                    await this.exitCS2();
+                    await this.launch();
+                });
+
+                ws.on("close", async (err) => {
+                    console.error(err);
+                    console.log("Websocket closed. Restarting CS2...");
+
+                    wss.close();
+                    this.CS2WebSocket = null;
+                    await this.exitCS2();
+                    await this.launch();
                 });
 
                 ws.once("message", (data) => {
@@ -90,9 +102,7 @@ export class HLAE {
                 });
             });
 
-            this.CS2ChildProcess = exec(hlaeLaunchArgs.join(' '), () => {
-                console.log("CS2 Closed");
-            });
+            this.CS2ChildProcess = exec(hlaeLaunchArgs.join(' '));
 
             setTimeout(() => {
                 if (!isConnected) {
@@ -110,22 +120,24 @@ export class HLAE {
             }
 
             exec(`taskkill /im cs2.exe /f /t`, (err) => {
-                if (err) {
-                    rej(err);
-                } else {
-                    res();
-                }
+                res();
             })
         });
     }
 
-    generateClip(demo: Demo): Promise<{ recordingFile: string, demo: Demo }> {
-        this.checkIfConnected();
+    async downloadDemo(demo: Demo) {
+        console.log(`Downloading demo with ID ${demo.id}`);
+        await downloadBZip2(demo.url, path.join(this.cs2DemoPath, demo.id + ".dem"));
+        console.log(`Download done for demo ${demo.id}`);
+    }
 
+    generateClip(demo: Demo): Promise<{ recordingFile: string, demo: Demo }> {
         return new Promise(async (res, rej) => {
-            console.log("downloading");
-            // await downloadBZip2(demo.url, path.join(this.cs2DemoPath, demo.id + ".dem"));
-            console.log("Download done. sending ws message");
+            this.checkIfConnected();
+            
+            if (!(await exists(path.join(this.cs2DemoPath, demo.id + ".dem")))) {
+                return rej("Demo file not found.");
+            }
 
             await rimraf(this.cs2ClipPath, {preserveRoot: true}); // Clear the clip directory
 
@@ -147,6 +159,7 @@ export class HLAE {
 
                 await this.sleep(2000); // Wait 2 seconds before stitching clips for final data to be written
 
+                console.log("Clips done. Processing clips...");
                 const clipFolders = (await readdir(this.cs2ClipPath, { withFileTypes: true })).filter(ent => ent.isDirectory).slice(0, demo.clipIntervals.length).map(dir => path.join(dir.parentPath, dir.name));
                 const videoClips = clipFolders.map(folder => path.join(folder, "video_with_audio.mp4"));
                 await this.ffmpeg.addAudioToVideos(
@@ -155,6 +168,7 @@ export class HLAE {
                     videoClips
                 );
                 const outputFile = await this.ffmpeg.concatVideos(videoClips, this.cs2ClipPath);
+                console.log("Done processing clips");
 
                 return res({
                     recordingFile: outputFile,
