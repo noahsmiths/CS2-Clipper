@@ -35,3 +35,9 @@ hlae.launch()
     });
 
 console.log("launching");
+
+process.addListener("SIGINT", async () => {
+    console.log("Shutting down...");
+    await hlae.exitCS2();
+    process.exit(0);
+})

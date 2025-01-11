@@ -102,8 +102,21 @@ export class HLAE {
         });
     }
 
-    exitCS2(): boolean {
-        return this.CS2ChildProcess?.kill() || false;
+    exitCS2(): Promise<void> {
+        // return this.CS2ChildProcess?.kill() || false;
+        return new Promise((res, rej) => {
+            if (this.CS2ChildProcess === null) {
+                return res();
+            }
+
+            exec(`taskkill /im cs2.exe /f /t`, (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    res();
+                }
+            })
+        });
     }
 
     generateClip(demo: Demo): Promise<{ recordingFile: string, demo: Demo }> {
