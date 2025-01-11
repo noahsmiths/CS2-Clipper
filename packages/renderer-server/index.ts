@@ -11,16 +11,16 @@ console.log(matchURL);
 // await downloadBZip2(matchURL, "./demo.dem");
 // console.log("Done");
 
-const deaths = parseEvent("./demo.dem", "player_death", [], ["is_warmup_period"]).filter((event: any) => !event.is_warmup_period && event.attacker_name === "p0pul4r_VL0NER");
+// const deaths = parseEvent("./demo.dem", "player_death", [], ["is_warmup_period"]).filter((event: any) => !event.is_warmup_period && event.attacker_name === "p0pul4r_VL0NER");
 
-let prevDeath = Infinity;
-const clipTimes = [];
-for (let death of deaths) {
-    clipTimes.push({
-        start: death.tick - 64,
-        end: death.tick + 64,
-        playerName: "",
-    })
-};
+// let prevDeath = Infinity;
+// const clipTimes = [];
+// for (let death of deaths) {
+//     clipTimes.push({
+//         start: death.tick - 64,
+//         end: death.tick + 64,
+//         playerName: "",
+//     })
+// };
 
-console.log(clipTimes);
+// console.log(clipTimes);

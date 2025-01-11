@@ -12,6 +12,7 @@
     "build:mirv-script": "bun build ./hlae/mirv-scripts/mirvBridge.ts --outfile ./hlae/mirv-scripts/build/mirvBridge.mjs --watch"
   },
   "dependencies": {
+    "rimraf": "^6.0.1",
     "ws": "^8.18.0"
   }
 }

@@ -27,8 +27,8 @@ hlae.launch()
                 { start: 141079, end: 141207, playerName: 'p0pul4r_VL0NER' },
                 // { start: 141153, end: 141281, playerName: '' }
             ],
-            fps: 60
-        })
+            fps: 30
+        });
     })
     .catch((err) => {
         console.error("CS2 launch error: ", err);

@@ -1,32 +1,51 @@
-function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}): Promise<void> {
-    mirv.exec(`mirv_streams record name "${outputPath}"`);
-    mirv.exec(`mirv_streams record fps ${demo.fps}`);
-    mirv.exec(`mirv_streams record screen enabled 1`);
-    mirv.exec(`mirv_streams record startMovieWav 1`);
-    mirv.exec(`mirv_streams record screen settings afxFfmpeg`);
-    mirv.exec(`mirv_cmd clear`);
-    mirv.exec(`mirv_cmd addAtTick 0 demoui`);
-    mirv.exec(`mirv_cmd addAtTick 0 demoui`);
-    mirv.exec(`mirv_cmd addAtTick 0 demo_gototick ${demo.clipIntervals[0].start}`);
-    mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[0].start} spec_player ${demo.clipIntervals[0].playerName}`);
-    mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[0].start} mirv_streams record start`);
+// function sleep(timeMS: number) {
+//     return new Promise(res => setTimeout(res, timeMS));
+// }
 
-    for (let i = 1; i < demo.clipIntervals.length; i++) {
-        mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i - 1].end} demo_gototick ${demo.clipIntervals[i].start}`);
-        mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start} spec_player ${demo.clipIntervals[i].playerName}`);
-    }
-
-    mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[demo.clipIntervals.length - 1].end} mirv_streams record end`);
-    mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[demo.clipIntervals.length - 1].end} disconnect`);
-    
-    mirv.exec(`playdemo ${demo.id}`);
-
-    return new Promise((res) => {
+function waitForClip() {
+    return new Promise<void>((res) => {
         mirv.onRecordEnd = () => {
             mirv.onRecordEnd = undefined;
             res();
         }
     });
+}
+
+function waitForRoundStart() {
+    return new Promise<void>((res) => {
+        mirv.onGameEvent = (e) => {
+            if (e.name === "round_poststart") {
+                mirv.onGameEvent = undefined;
+                res();
+            }
+        }
+    });
+}
+
+async function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}) {
+    mirv.exec(`mirv_streams record name "${outputPath}"`);
+    mirv.exec(`mirv_streams record fps ${demo.fps}`);
+    mirv.exec(`mirv_streams record screen enabled 1`);
+    mirv.exec(`mirv_streams record startMovieWav 1`);
+    mirv.exec(`mirv_streams record screen settings afxFfmpeg`);
+
+    mirv.exec(`playdemo ${demo.id}`);
+
+    await waitForRoundStart();
+    mirv.exec(`demoui`);
+
+    for (let i = 0; i < demo.clipIntervals.length; i++) {
+        mirv.exec(`mirv_cmd clear`);
+        mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start - 96} spec_player ${demo.clipIntervals[i].playerName}`);
+        mirv.exec(`demo_gototick ${demo.clipIntervals[i].start - 96}`); // Go to 1.5 seconds before clip start
+        mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start} mirv_streams record start`);
+        mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].end} mirv_streams record end`);
+        mirv.exec(`demo_resume`);
+        await waitForClip();
+        mirv.exec(`demo_pause`);
+    }
+
+    mirv.exec(`disconnect`);
 }
 
 function handleMessages(inSocket: mirv.WsIn, outSocket: mirv.WsOut) {

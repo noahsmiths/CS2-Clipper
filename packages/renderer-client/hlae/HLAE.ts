@@ -5,6 +5,9 @@ import { WebSocket, WebSocketServer } from "ws";
 // @ts-ignore: Imports the file for building a single file exectuable with Bun
 import mirvBridge from "./mirv-scripts/build/mirvBridge.mjs" with { type: "file" };
 import { downloadBZip2 } from "../../shared/utils/BZip2Downloader";
+import { FFMpeg } from "./FFMpeg";
+import { readdir } from "node:fs/promises";
+import { rimraf } from "rimraf";
 
 export class HLAE {
     hlaeExecutablePath: string;
@@ -17,6 +20,7 @@ export class HLAE {
 
     private CS2ChildProcess: ChildProcess | null = null;
     private CS2WebSocket: WebSocket | null = null;
+    private ffmpeg: FFMpeg;
 
     constructor(hlaePath: string, cs2Path: string) {
         this.hlaeExecutablePath = path.join(hlaePath, "HLAE.exe");
@@ -25,6 +29,7 @@ export class HLAE {
         this.cs2ConfigPath = path.join(cs2Path, "csgo/cfg/cs2_clipper.cfg");
         this.cs2MirvBridgePath = path.join(cs2Path, "csgo/cfg/mirvBridge.mjs"); // Currently just using the cfg folder to host the script as well
         this.cs2DemoPath = path.join(cs2Path, "csgo");
+        this.ffmpeg = new FFMpeg(path.join(hlaePath, "ffmpeg/bin/ffmpeg.exe"));
     }
 
     private writeMirvScript(): Promise<void> {
@@ -109,6 +114,8 @@ export class HLAE {
             // await downloadBZip2(demo.url, path.join(this.cs2DemoPath, demo.id + ".dem"));
             console.log("Download done. sending ws message");
 
+            await rimraf(this.cs2ClipPath, {preserveRoot: true}); // Clear the clip directory
+
             this.CS2WebSocket?.send(JSON.stringify({
                 event: "recordClipRequest",
                 data: {
@@ -117,18 +124,27 @@ export class HLAE {
                 }
             }));
 
-            this.CS2WebSocket?.once("message", (rawMessage) => {
+            this.CS2WebSocket?.once("message", async (rawMessage) => {
                 const message = JSON.parse(rawMessage.toString()) as MirvMessage;
 
-                if (message.event === "recordClipResponse") {
-                    if (message.data) {
-                        console.log("Clipped successfully!");
-                        res({recordingFile: "", demo});
-                    } else {
-                        console.log("Error clipping");
-                        rej();
-                    }
+                if (message.event === "recordClipResponse" && !message.data) {
+                    console.log("Error clipping");
+                    return rej();
                 }
+
+                const clipFolders = (await readdir(this.cs2ClipPath, { withFileTypes: true })).filter(ent => ent.isDirectory).slice(0, demo.clipIntervals.length).map(dir => path.join(dir.parentPath, dir.name));
+                const videoClips = clipFolders.map(folder => path.join(folder, "video_with_audio.mp4"));
+                await this.ffmpeg.addAudioToVideos(
+                    clipFolders.map(folder => path.join(folder, "video.mp4")),
+                    clipFolders.map(folder => path.join(folder, "audio.wav")),
+                    videoClips
+                );
+                const outputFile = await this.ffmpeg.concatVideos(videoClips, this.cs2ClipPath);
+
+                return res({
+                    recordingFile: outputFile,
+                    demo: demo
+                });
             })
         });
     }
