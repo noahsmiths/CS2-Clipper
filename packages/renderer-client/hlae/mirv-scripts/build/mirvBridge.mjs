@@ -18,6 +18,7 @@ function waitForRoundStart() {
   });
 }
 async function recordClip({ demo, outputPath }) {
+  mirv.exec(`mirv_cmd clear`);
   mirv.exec(`mirv_streams record name "${outputPath}"`);
   mirv.exec(`mirv_streams record fps ${demo.fps}`);
   mirv.exec(`mirv_streams record screen enabled 1`);
@@ -36,7 +37,8 @@ async function recordClip({ demo, outputPath }) {
     await waitForClip();
     mirv.exec(`demo_pause`);
   }
-  mirv.exec(`disconnect`);
+  mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[demo.clipIntervals.length - 1].end + 128} disconnect`);
+  mirv.exec(`demo_resume`);
 }
 function handleMessages(inSocket, outSocket) {
   async function handleIncoming() {

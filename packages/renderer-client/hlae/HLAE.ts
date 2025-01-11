@@ -59,7 +59,7 @@ export class HLAE {
             "-programPath",
             `"${this.cs2ExecutablePath}"`,
             "-cmdLine",
-            `"-steam -insecure +sv_lan 1 -window -console -game csgo -novid +exec cs2_clipper.cfg"`
+            `"-steam -insecure +sv_lan 1 -window -console -game csgo -novid -w 1920 -h 1080 +exec cs2_clipper.cfg"`
         ];
 
         await this.writeMirvScript();
@@ -145,6 +145,8 @@ export class HLAE {
                     return rej();
                 }
 
+                await this.sleep(2000); // Wait 2 seconds before stitching clips for final data to be written
+
                 const clipFolders = (await readdir(this.cs2ClipPath, { withFileTypes: true })).filter(ent => ent.isDirectory).slice(0, demo.clipIntervals.length).map(dir => path.join(dir.parentPath, dir.name));
                 const videoClips = clipFolders.map(folder => path.join(folder, "video_with_audio.mp4"));
                 await this.ffmpeg.addAudioToVideos(
@@ -160,5 +162,9 @@ export class HLAE {
                 });
             })
         });
+    }
+
+    private sleep(timeMS: number) {
+        return new Promise(res => setTimeout(res, timeMS));
     }
 }
