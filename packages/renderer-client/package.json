@@ -9,7 +9,8 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "build:mirv-script": "bun build ./hlae/mirv-scripts/mirvBridge.ts --outfile ./hlae/mirv-scripts/build/mirvBridge.mjs --watch"
+    "build:mirv-script": "bun build ./hlae/mirv-scripts/mirvBridge.ts --outfile ./hlae/mirv-scripts/build/mirvBridge.mjs --watch",
+    "build:executable": "bun build ./index.ts --compile --outfile client"
   },
   "dependencies": {
     "rimraf": "^6.0.1",
