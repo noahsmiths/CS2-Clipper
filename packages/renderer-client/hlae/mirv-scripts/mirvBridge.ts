@@ -55,10 +55,12 @@ async function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}) 
     mirv.exec(`demoui`);
 
     for (let i = 0; i < demo.clipIntervals.length; i++) {
+        const offset = i === 0 ? 128 : 96; // Different pre-clip offsets for if it's the first clip or not. First clip needs to load a little more, so it's 128 ticks (2 seconds)
+
         mirv.exec(`mirv_deathmsg clear`);
         mirv.exec(`mirv_cmd clear`);
-        mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start - 96} spec_player ${demo.clipIntervals[i].playerName}`);
-        mirv.exec(`demo_gototick ${demo.clipIntervals[i].start - 96}`); // Go to 1.5 seconds before clip start
+        mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start - offset} spec_player ${demo.clipIntervals[i].playerName}`);
+        mirv.exec(`demo_gototick ${demo.clipIntervals[i].start - offset}`); // Go to 1.5 seconds before clip start
         mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start} mirv_streams record start`);
         mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].end} mirv_streams record end`);
         mirv.exec(`demo_resume`);
@@ -88,7 +90,7 @@ function handleMessages(inSocket: mirv.WsIn, outSocket: mirv.WsOut) {
                         })
                         .catch(async () => {
                             await outSocket.send(JSON.stringify({
-                                event: "recordClipResponse",
+                                event: "recordClipResponseError",
                                 data: false
                             }));
                         });

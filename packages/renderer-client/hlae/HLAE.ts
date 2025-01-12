@@ -48,7 +48,7 @@ export class HLAE {
         }
     }
 
-    async launch(): Promise<void> {
+    async launch(resolution: { width: number, height: number }): Promise<void> {
         const hlaeLaunchArgs = [
             `"${this.hlaeExecutablePath}"`,
             "-customLoader",
@@ -59,7 +59,7 @@ export class HLAE {
             "-programPath",
             `"${this.cs2ExecutablePath}"`,
             "-cmdLine",
-            `"-steam -insecure +sv_lan 1 -window -console -game csgo -novid -w 1920 -h 1080 +exec cs2_clipper.cfg"`
+            `"-steam -insecure +sv_lan 1 -window -console -game csgo -novid -w ${resolution.width} -h ${resolution.height} +exec cs2_clipper.cfg"`
         ];
 
         await this.writeMirvScript();
@@ -73,23 +73,15 @@ export class HLAE {
                 this.CS2WebSocket = ws;
     
                 ws.on("error", async (err) => {
-                    console.error(err);
-                    console.log("Websocket error. Restarting CS2...");
-
-                    wss.close();
-                    this.CS2WebSocket = null;
+                    console.error(`Websocket error code: ${err}`);
                     await this.exitCS2();
-                    await this.launch();
+                    process.exit(1);
                 });
 
                 ws.on("close", async (err) => {
-                    console.error(err);
-                    console.log("Websocket closed. Restarting CS2...");
-
-                    wss.close();
-                    this.CS2WebSocket = null;
+                    console.error(`Websocket close code: ${err}`);
                     await this.exitCS2();
-                    await this.launch();
+                    process.exit(1);
                 });
 
                 ws.once("message", (data) => {
@@ -113,15 +105,13 @@ export class HLAE {
     }
 
     exitCS2(): Promise<void> {
-        // return this.CS2ChildProcess?.kill() || false;
-        return new Promise((res, rej) => {
-            if (this.CS2ChildProcess === null) {
-                return res();
-            }
+        return new Promise((res) => {
+            this.CS2WebSocket?.removeAllListeners("error");
+            this.CS2WebSocket?.removeAllListeners("close");
 
-            exec(`taskkill /im cs2.exe /f /t`, (err) => {
+            exec(`taskkill /im cs2.exe /f /t`, () => {
                 res();
-            })
+            });
         });
     }
 
@@ -152,8 +142,8 @@ export class HLAE {
             this.CS2WebSocket?.once("message", async (rawMessage) => {
                 const message = JSON.parse(rawMessage.toString()) as MirvMessage;
 
-                if (message.event === "recordClipResponse" && !message.data) {
-                    console.log("Error clipping");
+                if (message.event === "recordClipResponseError") {
+                    console.error(`Error clipping: ${message.data}`);
                     return rej();
                 }
 

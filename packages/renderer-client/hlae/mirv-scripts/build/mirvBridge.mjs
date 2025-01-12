@@ -38,10 +38,11 @@ async function recordClip({ demo, outputPath }) {
   await waitForRoundStart();
   mirv.exec(`demoui`);
   for (let i = 0;i < demo.clipIntervals.length; i++) {
+    const offset = i === 0 ? 128 : 96;
     mirv.exec(`mirv_deathmsg clear`);
     mirv.exec(`mirv_cmd clear`);
-    mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start - 96} spec_player ${demo.clipIntervals[i].playerName}`);
-    mirv.exec(`demo_gototick ${demo.clipIntervals[i].start - 96}`);
+    mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start - offset} spec_player ${demo.clipIntervals[i].playerName}`);
+    mirv.exec(`demo_gototick ${demo.clipIntervals[i].start - offset}`);
     mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start} mirv_streams record start`);
     mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].end} mirv_streams record end`);
     mirv.exec(`demo_resume`);
@@ -66,7 +67,7 @@ function handleMessages(inSocket, outSocket) {
             }));
           }).catch(async () => {
             await outSocket.send(JSON.stringify({
-              event: "recordClipResponse",
+              event: "recordClipResponseError",
               data: false
             }));
           });
