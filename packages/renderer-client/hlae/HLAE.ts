@@ -8,6 +8,7 @@ import { downloadBZip2 } from "../../shared/utils/BZip2Downloader";
 import { FFMpeg } from "./FFMpeg";
 import { exists, readdir } from "node:fs/promises";
 import { rimraf } from "rimraf";
+import { createServer, Server } from "node:http";
 
 export class HLAE {
     hlaeExecutablePath: string;
@@ -19,6 +20,7 @@ export class HLAE {
     cs2ClipPath: string = "C:\\cs2_clips";
 
     private CS2ChildProcess: ChildProcess | null = null;
+    private HTTPServer: Server | null = null;
     private CS2WebSocket: WebSocket | null = null;
     private ffmpeg: FFMpeg;
 
@@ -48,6 +50,21 @@ export class HLAE {
         }
     }
 
+    private closeServer(): Promise<void> {
+        return new Promise((res) => {
+            if (this.HTTPServer) {
+                console.log("SERVER");
+                this.HTTPServer.closeAllConnections();
+                this.HTTPServer.closeIdleConnections();
+                this.HTTPServer.close(() => {
+                    res();
+                });
+            } else {
+                res();
+            }
+        });
+    }
+
     async launch(): Promise<void> {
         const hlaeLaunchArgs = [
             `"${this.hlaeExecutablePath}"`,
@@ -64,7 +81,8 @@ export class HLAE {
 
         await this.writeMirvScript();
 
-        const wss = new WebSocketServer({ port: 2222 });
+        this.HTTPServer = createServer().listen(2222);
+        const wss = new WebSocketServer({ server: this.HTTPServer });
         
         return new Promise<void>((res, rej) => {
             let isConnected = false;
@@ -76,9 +94,9 @@ export class HLAE {
                     console.error(err);
                     console.log("Websocket error. Restarting CS2...");
 
-                    wss.close();
                     this.CS2WebSocket = null;
-                    await this.exitCS2();
+                    await this.closeServer();
+                    await this.closeCS2();
                     await this.launch();
                 });
 
@@ -86,9 +104,9 @@ export class HLAE {
                     console.error(err);
                     console.log("Websocket closed. Restarting CS2...");
 
-                    wss.close();
                     this.CS2WebSocket = null;
-                    await this.exitCS2();
+                    await this.closeServer();
+                    await this.closeCS2();
                     await this.launch();
                 });
 
@@ -111,8 +129,8 @@ export class HLAE {
             }, 60_000); // Timeout if game isn't launched and ready within 60 seconds
         });
     }
-
-    exitCS2(): Promise<void> {
+    
+    private closeCS2(): Promise<void> {
         // return this.CS2ChildProcess?.kill() || false;
         return new Promise((res, rej) => {
             if (this.CS2ChildProcess === null) {
@@ -123,6 +141,16 @@ export class HLAE {
                 res();
             })
         });
+    }
+
+    /**
+     * This method should only ever be called before creating a new HLAE instance or exiting
+     */
+    async exitCS2() {
+        this.CS2WebSocket?.removeAllListeners(); // Prevent a relaunch
+
+        await this.closeServer();
+        await this.closeCS2();
     }
 
     async downloadDemo(demo: Demo) {
