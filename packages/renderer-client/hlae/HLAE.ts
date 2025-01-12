@@ -64,7 +64,7 @@ export class HLAE {
 
         await this.writeMirvScript();
 
-        const wss = new WebSocketServer({ port: 2222 });
+        const wss = new WebSocketServer({ host: "127.0.0.1", port: 2222 });
         
         return new Promise<void>((res, rej) => {
             let isConnected = false;
