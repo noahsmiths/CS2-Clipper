@@ -3,7 +3,7 @@ import { parseConfig } from "./utils/parseConfig";
 
 const CONFIG_FILE_PATH = "./config.json";
 const config = await parseConfig(CONFIG_FILE_PATH);
-const hlae = new HLAE(config.HLAE_path, config.CS_path);
+const hlae = new HLAE(config.HLAE_path, config.CS_path, config.clip_path);
 
 hlae.launch({ width: 1280, height: 720 })
     .then(() => {

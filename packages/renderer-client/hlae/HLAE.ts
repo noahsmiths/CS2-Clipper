@@ -16,13 +16,13 @@ export class HLAE {
     cs2ConfigPath: string;
     cs2MirvBridgePath: string;
     cs2DemoPath: string;
-    cs2ClipPath: string = "C:\\cs2_clips";
+    cs2ClipPath: string;
 
     private CS2ChildProcess: ChildProcess | null = null;
     private CS2WebSocket: WebSocket | null = null;
     private ffmpeg: FFMpeg;
 
-    constructor(hlaePath: string, cs2Path: string) {
+    constructor(hlaePath: string, cs2Path: string, clipPath: string) {
         this.hlaeExecutablePath = path.join(hlaePath, "HLAE.exe");
         this.hlaeSource2HookPath = path.join(hlaePath, "x64/AfxHookSource2.dll");
         this.cs2ExecutablePath = path.join(cs2Path, "bin/win64/cs2.exe");
@@ -30,6 +30,7 @@ export class HLAE {
         this.cs2MirvBridgePath = path.join(cs2Path, "csgo/cfg/mirvBridge.mjs"); // Currently just using the cfg folder to host the script as well
         this.cs2DemoPath = path.join(cs2Path, "csgo");
         this.ffmpeg = new FFMpeg(path.join(hlaePath, "ffmpeg/bin/ffmpeg.exe"));
+        this.cs2ClipPath = clipPath;
     }
 
     private writeMirvScript(): Promise<void> {
