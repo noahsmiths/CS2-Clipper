@@ -11,10 +11,23 @@ function waitForClip() {
     });
 }
 
+const nameAndSteamIDToUserID: {[key : string]: string} = {};
+
+/**
+ * This is an IMPORTANT function. Not only does it wait for round start, but it also populates the nameToUserID field that is necessary for spec_player
+ */
 function waitForRoundStart() {
     return new Promise<void>((res) => {
         mirv.onGameEvent = (e) => {
-            if (e.name === "round_poststart") {
+            if (e.name === "player_info") {
+                const data = JSON.parse(e.data);
+
+                if (!data.bot && 0 <= data.userid && data.userid <= 9) {
+                    nameAndSteamIDToUserID[data.name] = data.userid + 1;
+                    nameAndSteamIDToUserID[data.steamid.toString()] = data.userid + 1;
+                }
+            } else if (e.name === "round_poststart") {
+                mirv.message(JSON.stringify(nameAndSteamIDToUserID));
                 mirv.onGameEvent = undefined;
                 res();
             }
@@ -55,11 +68,14 @@ async function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}) 
     mirv.exec(`demoui`);
 
     for (let i = 0; i < demo.clipIntervals.length; i++) {
+        const playerID = nameAndSteamIDToUserID[demo.clipIntervals[i].playerName];
+        if (playerID === undefined) continue;
+
         const offset = i === 0 ? 128 : 96; // Different pre-clip offsets for if it's the first clip or not. First clip needs to load a little more, so it's 128 ticks (2 seconds)
 
         mirv.exec(`mirv_deathmsg clear`);
         mirv.exec(`mirv_cmd clear`);
-        mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start - offset} spec_player ${demo.clipIntervals[i].playerName}`);
+        mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start - offset} spec_player ${playerID}`);
         mirv.exec(`demo_gototick ${demo.clipIntervals[i].start - offset}`); // Go to 1.5 seconds before clip start
         mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start} mirv_streams record start`);
         mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].end} mirv_streams record end`);
