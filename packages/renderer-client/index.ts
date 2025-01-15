@@ -2,6 +2,7 @@ import { Connection } from "rabbitmq-client";
 import { HLAE } from "./hlae/HLAE";
 import { parseConfig } from "./utils/parseConfig";
 import { uploadFile } from "./utils/uploadFile";
+import { checkIfValveURL } from "./utils/checkIfValveURL";
 
 const CONFIG_FILE_PATH = "./config.json";
 const config = await parseConfig(CONFIG_FILE_PATH);
@@ -30,6 +31,12 @@ const sub = rabbit.createConsumer({
     requeue: true,
 }, async (msg) => {
     const demo = JSON.parse(msg.body) as Demo;
+    if (!checkIfValveURL(demo.url)) {
+        throw new Error(`The following is not a valid Valve demo url: ${demo.url}`);
+    }
+
+    // Give the demo a custom ID, matching the download URL from Valve of the match
+    demo.id = demo.url.substring(demo.url.lastIndexOf('/') + 1, demo.url.length - 8);
 
     await hlae.downloadDemo(demo);
     console.log("Generating clip...");
