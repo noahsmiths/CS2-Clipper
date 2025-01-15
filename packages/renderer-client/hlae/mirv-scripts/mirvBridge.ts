@@ -91,16 +91,6 @@ async function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}) 
 
 function handleMessages(inSocket: mirv.WsIn, outSocket: mirv.WsOut) {
     async function handleIncoming() {
-        // inSocket.next()
-        //     .then((msg) => {
-        //         mirv.message("Message recvd\n");
-        //         mirv.message(msg + "\n");
-        //     })
-        //     .catch((err) => {
-        //         mirv.message("Error on WS!\n");
-        //         mirv.message(err + "\n");
-        //     });
-        // return;
         while (true) {
             try {
                 const rawMessage = await inSocket.next() as string;
