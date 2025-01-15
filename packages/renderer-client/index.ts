@@ -1,46 +1,60 @@
+import { Connection } from "rabbitmq-client";
 import { HLAE } from "./hlae/HLAE";
 import { parseConfig } from "./utils/parseConfig";
+import { uploadFile } from "./utils/uploadFile";
 
 const CONFIG_FILE_PATH = "./config.json";
 const config = await parseConfig(CONFIG_FILE_PATH);
 const hlae = new HLAE(config.HLAE_path, config.CS_path, config.clip_path);
 
-hlae.launch({ width: 1280, height: 720 })
-    .then(() => {
-        console.log("CS2 Launched without error");
-        hlae.generateClip({
-            id: "test-demo",
-            url: "http://replay129.valve.net/730/003727610429107601608_0736207833.dem.bz2",
-            clipIntervals: [
-                { start: 8127, end: 8255, playerName: 'p0pul4r_VL0NER' },
-                { start: 17505, end: 17633, playerName: 'p0pul4r_VL0NER' },
-                { start: 19956, end: 20084, playerName: 'p0pul4r_VL0NER' },
-                { start: 23215, end: 23343, playerName: 'p0pul4r_VL0NER' },
-                { start: 35666, end: 35794, playerName: 'p0pul4r_VL0NER' },
-                // { start: 36140, end: 36268, playerName: 'p0pul4r_VL0NER' },
-                // { start: 52971, end: 53099, playerName: 'p0pul4r_VL0NER' },
-                // { start: 57824, end: 57952, playerName: 'p0pul4r_VL0NER' },
-                // { start: 62724, end: 62852, playerName: 'p0pul4r_VL0NER' },
-                // { start: 66542, end: 66670, playerName: 'p0pul4r_VL0NER' },
-                // { start: 93286, end: 93414, playerName: 'p0pul4r_VL0NER' },
-                // { start: 121823, end: 121951, playerName: 'p0pul4r_VL0NER' },
-                // { start: 141079, end: 141207, playerName: 'p0pul4r_VL0NER' },
-                // { start: 141153, end: 141281, playerName: '' }
-            ],
-            fps: 60
+console.log("Closing old CS2 instance if it exists...");
+await hlae.exitCS2();
+await Bun.sleep(2000);
+
+console.log("Launching CS2 with HLAE...");
+await hlae.launch({ width: 1920, height: 1080 });
+console.log("CS2 Launched");
+
+const rabbit = new Connection(config.RABBITMQ_URL);
+rabbit.on("error", (err) => {
+    console.log(`[RabbitMQ] Error: ${err}`);
+});
+rabbit.on("connection", () => {
+    console.log("[RabbitMQ] Connection successfully established");
+});
+
+const sub = rabbit.createConsumer({
+    queue: "demos",
+    queueOptions: { durable: true, arguments: { "x-queue-type": "quorum", "x-delivery-limit": 5 } },
+    qos: { prefetchCount: 1 },
+    requeue: true,
+}, async (msg) => {
+    const demo = msg.body as Demo;
+
+    await hlae.downloadDemo(demo);
+    console.log("Generating clip...");
+    const clip = await hlae.generateClip(demo);
+    console.log("Uploading file...");
+    await uploadFile(demo.webhook, clip.recordingFile);
+    console.log("File sent! Deleting old demo...");
+    hlae.deleteDemo(demo)
+        .then(() => {
+            console.log(`Demo ID ${demo.id} deleted`);
         })
-        .then((clip) => {
-            console.log(`Clip stored at file ${clip.recordingFile} for demo ID ${clip.demo.id}`);
+        .catch((err) => {
+            console.error(`Deletion error for Demo ID ${demo.id}: ${err}`);
         });
-    })
-    .catch((err) => {
-        console.error("CS2 launch error: ", err);
-    });
+});
 
-console.log("launching");
+sub.on("error", (err) => {
+    console.error(`[RabbitMQ] Sub error: ${err}`);
+})
 
-process.addListener("SIGINT", async () => {
+async function shutdown() {
     console.log("Shutting down...");
     await hlae.exitCS2();
     process.exit(0);
-})
+}
+
+process.addListener("SIGINT", shutdown);
+process.addListener("SIGTERM", shutdown);

@@ -8,6 +8,7 @@ import { downloadBZip2 } from "../../shared/utils/BZip2Downloader";
 import { FFMpeg } from "./FFMpeg";
 import { exists, readdir } from "node:fs/promises";
 import { rimraf } from "rimraf";
+import { unlink } from "node:fs";
 
 export class HLAE {
     hlaeExecutablePath: string;
@@ -71,18 +72,32 @@ export class HLAE {
             let isConnected = false;
 
             wss.on("connection", (ws) => {
+                console.log("Websocket connected");
                 this.CS2WebSocket = ws;
     
                 ws.on("error", async (err) => {
                     console.error(`Websocket error code: ${err}`);
-                    await this.exitCS2();
-                    process.exit(1);
+
+                    isConnected = false;
+                    console.log("Waiting 3 seconds before force-closing...");
+                    await Bun.sleep(3000);
+
+                    if (!isConnected) {
+                        await this.exitCS2();
+                        process.exit(1);
+                    }
                 });
 
                 ws.on("close", async (err) => {
                     console.error(`Websocket close code: ${err}`);
-                    await this.exitCS2();
-                    process.exit(1);
+                    isConnected = false;
+                    console.log("Waiting 3 seconds before force-closing...");
+                    await Bun.sleep(3000);
+
+                    if (!isConnected) {
+                        await this.exitCS2();
+                        process.exit(1);
+                    }
                 });
 
                 ws.once("message", (data) => {
@@ -122,6 +137,20 @@ export class HLAE {
         console.log(`Download done for demo ${demo.id}`);
     }
 
+    deleteDemo(demo: Demo) {
+        console.log(`Deleting demo with ID ${demo.id}`);
+
+        return new Promise<void>((res, rej) => {
+            unlink(path.join(this.cs2DemoPath, demo.id + ".dem"), (err) => {
+                if (!err || err.code === "ENOENT") {
+                    res();
+                } else {
+                    rej(err);
+                }
+            });
+        });
+    }
+
     generateClip(demo: Demo): Promise<{ recordingFile: string, demo: Demo }> {
         return new Promise(async (res, rej) => {
             this.checkIfConnected();
@@ -148,7 +177,7 @@ export class HLAE {
                     return rej();
                 }
 
-                await this.sleep(2000); // Wait 2 seconds before stitching clips for final data to be written
+                await Bun.sleep(2000); // Wait 2 seconds before stitching clips for final data to be written
 
                 console.log("Clips done. Processing clips...");
                 const clipFolders = (await readdir(this.cs2ClipPath, { withFileTypes: true })).filter(ent => ent.isDirectory).slice(0, demo.clipIntervals.length).map(dir => path.join(dir.parentPath, dir.name));
@@ -167,9 +196,5 @@ export class HLAE {
                 });
             })
         });
-    }
-
-    private sleep(timeMS: number) {
-        return new Promise(res => setTimeout(res, timeMS));
     }
 }

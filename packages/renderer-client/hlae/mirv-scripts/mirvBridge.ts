@@ -91,26 +91,40 @@ async function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}) 
 
 function handleMessages(inSocket: mirv.WsIn, outSocket: mirv.WsOut) {
     async function handleIncoming() {
+        // inSocket.next()
+        //     .then((msg) => {
+        //         mirv.message("Message recvd\n");
+        //         mirv.message(msg + "\n");
+        //     })
+        //     .catch((err) => {
+        //         mirv.message("Error on WS!\n");
+        //         mirv.message(err + "\n");
+        //     });
+        // return;
         while (true) {
-            const rawMessage = await inSocket.next() as string;
-            const message = JSON.parse(rawMessage) as MirvMessage;
+            try {
+                const rawMessage = await inSocket.next() as string;
+                const message = JSON.parse(rawMessage) as MirvMessage;
 
-            switch (message.event) {
-                case "recordClipRequest":
-                    recordClip(message.data)
-                        .then(async () => {
-                            await outSocket.send(JSON.stringify({
-                                event: "recordClipResponse",
-                                data: true
-                            }));
-                        })
-                        .catch(async () => {
-                            await outSocket.send(JSON.stringify({
-                                event: "recordClipResponseError",
-                                data: false
-                            }));
-                        });
-                    break;
+                switch (message.event) {
+                    case "recordClipRequest":
+                        recordClip(message.data)
+                            .then(async () => {
+                                await outSocket.send(JSON.stringify({
+                                    event: "recordClipResponse",
+                                    data: true
+                                }));
+                            })
+                            .catch(async () => {
+                                await outSocket.send(JSON.stringify({
+                                    event: "recordClipResponseError",
+                                    data: false
+                                }));
+                            });
+                        break;
+                }
+            } catch (err) {
+                mirv.message(`Error in handleIncoming: ${err}\n`);
             }
         }
     }
@@ -120,6 +134,7 @@ function handleMessages(inSocket: mirv.WsIn, outSocket: mirv.WsOut) {
 
 mirv.connect_async("ws://localhost:2222/")
     .then((ws) => {
+        mirv.message("--------------------------------------------------CONNECTED TO WS--------------------------------------------------\n");
         ws.out.send("activated")
             .then(() => {
                 handleMessages(ws.in, ws.out);

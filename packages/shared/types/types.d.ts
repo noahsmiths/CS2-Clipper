@@ -6,7 +6,8 @@ declare type Demo = {
         end: number,
         playerName: string,
     }>,
-    fps: number
+    fps: number,
+    webhook: string,
 }
 
 declare type MirvMessage = {

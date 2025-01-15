@@ -67,28 +67,35 @@ async function recordClip({ demo, outputPath }) {
 function handleMessages(inSocket, outSocket) {
   async function handleIncoming() {
     while (true) {
-      const rawMessage = await inSocket.next();
-      const message = JSON.parse(rawMessage);
-      switch (message.event) {
-        case "recordClipRequest":
-          recordClip(message.data).then(async () => {
-            await outSocket.send(JSON.stringify({
-              event: "recordClipResponse",
-              data: true
-            }));
-          }).catch(async () => {
-            await outSocket.send(JSON.stringify({
-              event: "recordClipResponseError",
-              data: false
-            }));
-          });
-          break;
+      try {
+        const rawMessage = await inSocket.next();
+        const message = JSON.parse(rawMessage);
+        switch (message.event) {
+          case "recordClipRequest":
+            recordClip(message.data).then(async () => {
+              await outSocket.send(JSON.stringify({
+                event: "recordClipResponse",
+                data: true
+              }));
+            }).catch(async () => {
+              await outSocket.send(JSON.stringify({
+                event: "recordClipResponseError",
+                data: false
+              }));
+            });
+            break;
+        }
+      } catch (err) {
+        mirv.message(`Error in handleIncoming: ${err}
+`);
       }
     }
   }
   handleIncoming();
 }
 mirv.connect_async("ws://localhost:2222/").then((ws) => {
+  mirv.message(`--------------------------------------------------CONNECTED TO WS--------------------------------------------------
+`);
   ws.out.send("activated").then(() => {
     handleMessages(ws.in, ws.out);
   }).catch(mirv.message);
