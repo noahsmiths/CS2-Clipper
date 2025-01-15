@@ -29,7 +29,7 @@ const sub = rabbit.createConsumer({
     qos: { prefetchCount: 1 },
     requeue: true,
 }, async (msg) => {
-    const demo = msg.body as Demo;
+    const demo = JSON.parse(msg.body) as Demo;
 
     await hlae.downloadDemo(demo);
     console.log("Generating clip...");
