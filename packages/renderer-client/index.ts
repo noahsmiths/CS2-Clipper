@@ -55,7 +55,7 @@ const sub = rabbit.createConsumer({
 
 sub.on("error", (err) => {
     console.error(`[RabbitMQ] Sub error: ${err}`);
-})
+});
 
 async function shutdown() {
     console.log("Shutting down...");
