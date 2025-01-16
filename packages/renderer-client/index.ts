@@ -36,20 +36,20 @@ const sub = rabbit.createConsumer({
     }
 
     // Give the demo a custom ID, matching the download URL from Valve of the match
-    demo.id = demo.url.substring(demo.url.lastIndexOf('/') + 1, demo.url.length - 8);
+    demo.id = "to_clip" + demo.url.substring(demo.url.lastIndexOf('/') + 1, demo.url.length - 8);
 
-    await hlae.downloadDemo(demo);
+    await hlae.downloadDemoIfDoesNotExist(demo);
     console.log("Generating clip...");
     const clip = await hlae.generateClip(demo);
     console.log("Uploading file...");
     await uploadFile(demo.webhook, clip.recordingFile);
     console.log("File sent! Deleting old demo...");
-    hlae.deleteDemo(demo)
-        .then(() => {
-            console.log(`Demo ID ${demo.id} deleted`);
+    hlae.deleteOldestDemos(config.DEMO_CACHE_LIMIT)
+        .then((numberDeleted) => {
+            console.log(`Deleted ${numberDeleted} demo(s).`);
         })
         .catch((err) => {
-            console.error(`Deletion error for Demo ID ${demo.id}: ${err}`);
+            console.error(`Demo deletion error: ${err}`);
         });
 });
 

@@ -6,9 +6,9 @@ import { WebSocket, WebSocketServer } from "ws";
 import mirvBridge from "./mirv-scripts/build/mirvBridge.mjs" with { type: "file" };
 import { downloadBZip2 } from "../../shared/utils/BZip2Downloader";
 import { FFMpeg } from "./FFMpeg";
-import { exists, readdir } from "node:fs/promises";
+import { exists, readdir, stat } from "node:fs/promises";
 import { rimraf } from "rimraf";
-import { unlink } from "node:fs";
+import { fstat, unlink } from "node:fs";
 
 export class HLAE {
     hlaeExecutablePath: string;
@@ -131,22 +131,58 @@ export class HLAE {
         });
     }
 
+    async downloadDemoIfDoesNotExist(demo: Demo) {
+        if (!(await this.demoExists(demo))) {
+            return this.downloadDemo(demo);
+        }
+    }
+
+    async demoExists(demo: Demo) {
+        return exists(path.join(this.cs2DemoPath, demo.id + ".dem"));
+    }
+
     async downloadDemo(demo: Demo) {
         console.log(`Downloading demo with ID ${demo.id}`);
         await downloadBZip2(demo.url, path.join(this.cs2DemoPath, demo.id + ".dem"));
         console.log(`Download done for demo ${demo.id}`);
     }
 
-    deleteDemo(demo: Demo) {
+    async deleteDemo(demo: Demo) {
         console.log(`Deleting demo with ID ${demo.id}`);
+        await this.deleteFile(path.join(this.cs2DemoPath, demo.id + ".dem"));
+    }
 
-        return new Promise<void>((res, rej) => {
-            unlink(path.join(this.cs2DemoPath, demo.id + ".dem"), (err) => {
-                if (!err || err.code === "ENOENT") {
-                    res();
-                } else {
-                    rej(err);
-                }
+    /**
+     * Delete the oldest demos, with the option to keep `numberToKeep` most recent demos.
+     * 
+     * @param numberToKeep How many of the most recent demo's to keep downloaded
+     */
+    async deleteOldestDemos(numberToKeep: number = 0) {
+
+        const demoFiles = (await readdir(this.cs2DemoPath, { withFileTypes: true }))
+            .filter(ent => ent.isFile() && ent.name.endsWith(".dem"))
+            .map(async (file) => {
+                const filePath = path.join(file.parentPath, file.name);
+                const fileStat = await stat(filePath);
+
+                return { filePath, creationTime: fileStat.mtimeMs };
+            });
+        const demoFilesWithTimes = await Promise.all(demoFiles);
+
+        const endIndex = numberToKeep <= 0 ? demoFilesWithTimes.length : -numberToKeep;
+        const deletions = demoFilesWithTimes
+            .toSorted((a, b) => a.creationTime - b.creationTime) // Sort by ascending order of timestamp (oldest to newest)
+            .slice(0, endIndex)
+            .map((file) => {
+                return this.deleteFile(file.filePath);
+            });
+        return (await Promise.all(deletions)).length;
+    }
+
+    private deleteFile(filePath: string) {
+        return new Promise<void>((res) => {
+            unlink(filePath, () => {
+                res();
             });
         });
     }
@@ -155,7 +191,7 @@ export class HLAE {
         return new Promise(async (res, rej) => {
             this.checkIfConnected();
             
-            if (!(await exists(path.join(this.cs2DemoPath, demo.id + ".dem")))) {
+            if (!(await this.demoExists(demo))) {
                 return rej("Demo file not found.");
             }
 
