@@ -133,7 +133,10 @@ export class HLAE {
 
     async downloadDemoIfDoesNotExist(demo: Demo) {
         if (!(await this.demoExists(demo))) {
+            console.log("Demo not already downloaded.");
             return this.downloadDemo(demo);
+        } else {
+            console.log("Demo already downloaded.");
         }
     }
 
