@@ -50,8 +50,6 @@ async function recordClip({ demo, outputPath }) {
   mirv.exec(`cl_spec_show_bindings false`);
   mirv.exec(`mp_display_kill_assists false`);
   mirv.exec(`mirv_viewmodel enabled 1; mirv_viewmodel set 2 0 -2 68 0`);
-  mirv.exec(`mirv_deathmsg filter clear`);
-  mirv.exec(`mirv_deathmsg filter add attackerMatch=!xTrace block=1 lastRule=1`);
   mirv.exec(`r_show_build_info false`);
   mirv.exec(`playdemo ${demo.id}`);
   await waitForRoundStart();
@@ -62,6 +60,8 @@ async function recordClip({ demo, outputPath }) {
       continue;
     const offset = i === 0 ? 128 : 96;
     mirv.exec(`mirv_deathmsg clear`);
+    mirv.exec(`mirv_deathmsg filter clear`);
+    mirv.exec(`mirv_deathmsg filter add attackerMatch=!${+playerID - 1} block=1 lastRule=1`);
     mirv.exec(`mirv_cmd clear`);
     mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[i].start - offset} spec_player ${playerID}`);
     mirv.exec(`demo_gototick ${demo.clipIntervals[i].start - offset}`);
