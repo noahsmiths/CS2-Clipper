@@ -19,7 +19,7 @@ export class FFMpeg {
         await writeFile(listFile, videoFileList.map(videoFile => `file '${videoFile}'`).join("\n"));
 
         const outputFile = path.join(outputDirectory, "output.mp4");
-        await this.execFFMpegWithArgs(`-safe 0 -f concat -i ${listFile} -c copy ${outputFile}`);
+        await this.execFFMpegWithArgs(`-safe 0 -f concat -i "${listFile}" -c copy "${outputFile}"`);
 
         return outputFile;
     }
