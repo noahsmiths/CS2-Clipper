@@ -216,9 +216,9 @@ export class HLAE {
                     return rej();
                 }
 
-                await Bun.sleep(2000); // Wait 2 seconds before stitching clips for final data to be written
+                // await Bun.sleep(2000); // Wait 2 seconds before stitching clips for final data to be written
 
-                console.log("Clips done. Processing clips...");
+                console.log("Clips recorded. Processing clips...");
                 const clipFolders = (await readdir(this.cs2ClipPath, { withFileTypes: true })).filter(ent => ent.isDirectory).slice(0, demo.clipIntervals.length).map(dir => path.join(dir.parentPath, dir.name));
                 const videoClips = clipFolders.map(folder => path.join(folder, "video_with_audio.mp4"));
                 await this.ffmpeg.addAudioToVideos(

@@ -1,4 +1,14 @@
 // hlae/mirv-scripts/mirvBridge.ts
+function waitForMainMenu() {
+  return new Promise((res) => {
+    mirv.onGameEvent = (e) => {
+      if (e.name === "game_newmap") {
+        mirv.onGameEvent = undefined;
+        res();
+      }
+    };
+  });
+}
 function waitForClip() {
   return new Promise((res) => {
     mirv.onRecordEnd = () => {
@@ -42,6 +52,7 @@ async function recordClip({ demo, outputPath }) {
   mirv.exec(`mirv_viewmodel enabled 1; mirv_viewmodel set 2 0 -2 68 0`);
   mirv.exec(`mirv_deathmsg filter clear`);
   mirv.exec(`mirv_deathmsg filter add attackerMatch=!xTrace block=1 lastRule=1`);
+  mirv.exec(`r_show_build_info false`);
   mirv.exec(`playdemo ${demo.id}`);
   await waitForRoundStart();
   mirv.exec(`demoui`);
@@ -63,6 +74,7 @@ async function recordClip({ demo, outputPath }) {
   mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[demo.clipIntervals.length - 1].end + 128} disconnect`);
   mirv.exec(`mirv_cmd addAtTick ${demo.clipIntervals[demo.clipIntervals.length - 1].end + 128} mirv_cmd clear`);
   mirv.exec(`demo_resume`);
+  await waitForMainMenu();
 }
 function handleMessages(inSocket, outSocket) {
   async function handleIncoming() {
