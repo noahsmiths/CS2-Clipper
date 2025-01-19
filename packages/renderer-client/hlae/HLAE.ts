@@ -44,8 +44,12 @@ export class HLAE {
         });
     }
 
-    private checkIfConnected(): void {
-        if (!this.CS2WebSocket) {
+    checkIfConnected(): boolean {
+        return this.CS2WebSocket !== null;
+    }
+
+    checkIfConnectedThrows(): void {
+        if (!this.checkIfConnected()) {
             throw new Error("Game not connected. Must call the launch() method first.");
         }
     }
@@ -192,7 +196,7 @@ export class HLAE {
 
     generateClip(demo: Demo): Promise<{ recordingFile: string, demo: Demo }> {
         return new Promise(async (res, rej) => {
-            this.checkIfConnected();
+            this.checkIfConnectedThrows();
             
             if (!(await this.demoExists(demo))) {
                 return rej("Demo file not found.");
