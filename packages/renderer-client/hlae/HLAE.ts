@@ -6,9 +6,10 @@ import { WebSocket, WebSocketServer } from "ws";
 import mirvBridge from "./mirv-scripts/build/mirvBridge.mjs" with { type: "file" };
 import { downloadBZip2 } from "../../shared/utils/BZip2Downloader";
 import { FFMpeg } from "./FFMpeg";
-import { exists, readdir, stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { rimraf } from "rimraf";
 import { fstat, unlink } from "node:fs";
+import { exists } from "../../shared/utils/exists";
 
 export class HLAE {
     hlaeExecutablePath: string;
