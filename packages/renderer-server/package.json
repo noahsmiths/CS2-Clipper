@@ -4,6 +4,7 @@
   "type": "module",
   "devDependencies": {
     "@types/globaloffensive": "^2.3.4",
+    "@types/pg": "^8.11.10",
     "@types/steam-user": "^5.0.4"
   },
   "peerDependencies": {
@@ -13,6 +14,8 @@
     "@laihoe/demoparser2": "^0.33.1",
     "dotenv": "^16.4.7",
     "globaloffensive": "^3.2.0",
+    "pg": "^8.13.1",
+    "sql-template-strings": "^2.2.2",
     "steam-user": "^5.2.0",
     "tsx": "^4.19.2"
   },
