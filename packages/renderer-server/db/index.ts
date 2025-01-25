@@ -16,7 +16,7 @@ export async function updateUserMatchIds(steamId: string, matchId: string) {
 
 export async function getDiscordIdAndChannelForUser(steamId: string) {
     const rows = await sql`SELECT U.discord_id as "discordId", D.channel_id as "channelId" FROM users as U LEFT JOIN discord_channels as D ON U.steam_id = D.steam_id WHERE D.steam_id = ${steamId};` as { discordId: string, channelId: string }[];
-    return rows[0];
+    return rows;
 }
 
 export async function getUserMatchDetails(steamId: string, matchId: string) {

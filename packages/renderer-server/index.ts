@@ -37,18 +37,20 @@ rabbit.on("connection", () => {
 demo.on("new-match", async (userIds, matchId, match) => {
     const channelIds: { [channelId: string]: string[] } = {};
     for (const userId of userIds) {
-        const discordInfo = await db.getDiscordIdAndChannelForUser(userId);
-        if (discordInfo.channelId) {
-            if (!channelIds.hasOwnProperty(discordInfo.channelId)) {
-                channelIds[discordInfo.channelId] = [];
+        const discordInfoList = await db.getDiscordIdAndChannelForUser(userId);
+        for (const discordInfo of discordInfoList) {
+            if (discordInfo.channelId) {
+                if (!channelIds.hasOwnProperty(discordInfo.channelId)) {
+                    channelIds[discordInfo.channelId] = [];
+                }
+                channelIds[discordInfo.channelId].push(discordInfo.discordId);
             }
-            channelIds[discordInfo.channelId].push(discordInfo.discordId);
         }
     }
 
     for (const channelId in channelIds) {
         console.log(`Sending match ${matchId} to ${channelId} for users ${channelIds[channelId]}`);
-        await discord.sendMatchToChannel(channelId, matchId, match);
+        await discord.sendMatchToChannel(channelId, matchId, match, channelIds[channelId]);
     }
 });
 

@@ -22,10 +22,10 @@ export class Discord extends EventEmitter {
         this.client = client;
     }
 
-    async sendMatchToChannel(channelId: string, matchId: string, match: Match) {
+    async sendMatchToChannel(channelId: string, matchId: string, match: Match, discordIds: string[]) {
         const channel = await this.client.channels.fetch(channelId);
         if (channel?.type === ChannelType.GuildText) {
-            const message = buildMatchDetailForm(matchId, match);
+            const message = buildMatchDetailForm(matchId, match, discordIds);
             channel.send(message);
         } else {
             throw new Error(`Channel ID: ${channelId} is of type ${channel?.type}, not GuildText`);
