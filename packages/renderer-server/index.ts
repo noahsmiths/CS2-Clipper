@@ -1,92 +1,148 @@
 import 'dotenv/config';
 import { MatchFetcher } from "./matches/MatchFetcher";
-import { downloadBZip2 } from 'shared/utils/BZip2Downloader';
-import { parseEvent } from '@laihoe/demoparser2';
 import { sleep } from './utils/sleep';
 import * as db from './db';
-import path from "node:path";
-import { stat } from "node:fs/promises";
-import { exists } from 'shared/utils/exists';
+import { Demos } from './demo/Demo';
+import { Discord } from './discord';
+import { Connection } from 'rabbitmq-client';
+import axios from 'axios';
 
 const matchFetcher = await MatchFetcher.createMatchFetcher();
+// const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-async function getLatestMatches(users: User[]): Promise<Matches> {
-    const matches: Matches = {};
-    
-    for (let i = 0; i < users.length; i++) {
-        const user = users[i];
-        const res = await fetch(`https://api.steampowered.com/ICSGOPlayers_730/GetNextMatchSharingCode/v1?key=${process.env.STEAM_API_KEY}&steamid=${user.steamId}&steamidkey=${user.authCode}&knowncode=${user.matchCode}`);
-        if (res.status !== 200) {
-            if (res.status === 429 || res.status === 503) {
-                await sleep(1000);
-                i--;
+if (!process.env.STEAM_API_KEY) {
+    throw new Error("No STEAM_API_KEY env variable set!");
+}
+const demo = new Demos(matchFetcher, process.env.STEAM_API_KEY, 60_000);
+
+if (!process.env.DISCORD_BOT_TOKEN) {
+    throw new Error("No DISCORD_BOT_TOKEN env variable set!");
+}
+const discord = new Discord(process.env.DISCORD_BOT_TOKEN);
+
+if (!process.env.RABBITMQ_URL) {
+    throw new Error("No RABBITMQ_URL env variable set!");
+}
+const rabbit = new Connection(process.env.RABBITMQ_URL);
+const pub = rabbit.createPublisher({
+    // Enable publish confirmations, similar to consumer acknowledgements
+    confirm: true,
+    // Enable retries
+    maxAttempts: 2,
+});
+rabbit.on("connection", () => {
+    console.log("RabbitMQ connected");
+});
+
+demo.on("new-match", async (userIds, matchId, match) => {
+    const channelIds: { [channelId: string]: string[] } = {};
+    for (const userId of userIds) {
+        const discordInfo = await db.getDiscordIdAndChannelForUser(userId);
+        if (discordInfo.channelId) {
+            if (!channelIds.hasOwnProperty(discordInfo.channelId)) {
+                channelIds[discordInfo.channelId] = [];
             }
-            continue;
+            channelIds[discordInfo.channelId].push(discordInfo.discordId);
         }
+    }
 
-        const data = (await res.json()) as { result: { nextcode: string } };
-        const code = data.result.nextcode;
-        if (code !== "n/a") { // Next code found
-            if (matches.hasOwnProperty(code)) {
-                matches[code].push(user.steamId);
+    for (const channelId in channelIds) {
+        console.log(`Sending match ${matchId} to ${channelId} for users ${channelIds[channelId]}`);
+        await discord.sendMatchToChannel(channelId, matchId, match);
+    }
+});
+
+function calculateIntervals(timestamps: number[], steamId: string): { start: number, end: number, playerName: string }[] {
+    const STARTING_OFFSET_TICKS = 3 * 64; // 2 seconds converted to ticks
+    const ENDING_OFFSET_TICKS = 3 * 64;
+    const PRE_KILL_OFFSET = 2 * 64;
+    const POST_KILL_OFFSET = 2 * 64;
+    const MAX_TICKS_BETWEEN_KILLS = 6 * 64; // If kills are within 6 seconds of each other, don't stop filming between
+    const intervals: { start: number, end: number, playerName: string }[] = [];
+
+    // timestamps.sort(); // Might be needed to get kills in correct order
+
+    for (let i = 0; i < timestamps.length; i++) {
+        const beforeOffset = i === 0 ? STARTING_OFFSET_TICKS : PRE_KILL_OFFSET;
+        const afterOffset = i === timestamps.length - 1 ? ENDING_OFFSET_TICKS : POST_KILL_OFFSET;
+
+        const currentTime = timestamps[i];
+        if (currentTime - timestamps[i - 1] < MAX_TICKS_BETWEEN_KILLS) { // Kills are within MAX_TICKS_BETWEEN_KILLS of each other
+            intervals[intervals.length - 1].end = currentTime + afterOffset;
+        } else {
+            intervals.push({
+                start: currentTime - beforeOffset,
+                end: currentTime + afterOffset,
+                playerName: steamId
+            });
+        }
+    }
+
+    return intervals;
+}
+
+discord.on("clip-request", async (steamId, matchId, clipType, channelId, discordId) => {
+    console.log("clip-request-received");
+    const url = await matchFetcher.getDemoURLFromMatchId(matchId);
+    const matchDetails = await db.getUserMatchDetails(steamId, matchId);
+
+    let intervals: { start: number, end: number, playerName: string }[] = [];
+    if (clipType === "highlight") {
+        intervals = calculateIntervals(matchDetails.kills, steamId);
+    } else if (clipType === "lowlight") {
+        intervals = calculateIntervals(matchDetails.deaths, steamId);
+    } else {
+        throw new Error(`clipType ${clipType} unsupported`);
+    }
+
+    const payload: Demo = {
+        url: url,
+        clipIntervals: intervals,
+        fps: 60,
+        webhook: "",
+        metadata: {
+            username: matchDetails.username,
+            channelId,
+            discordId,
+        }
+    };
+    await pub.send("demos", JSON.stringify(payload));
+});
+
+function waitForFullStreamableUpload(url: string) {
+    return new Promise<void>((res, rej) => {
+        const slug = new URL(url).pathname.substring(1);
+        const rejectTimeout = setTimeout(rej, 120_000);
+
+        async function pollUploadStatus() {
+            const result = await axios.get(`https://api-f.streamable.com/api/v1/videos/${slug}?version=0`);
+            if (result.data.percent === 100) {
+                res();
+                clearTimeout(rejectTimeout);
             } else {
-                matches[code] = [user.steamId];
+                setTimeout(() => {
+                    pollUploadStatus();
+                }, 10_000);
             }
         }
-    }
 
-    return matches;
+        pollUploadStatus();
+    });
 }
+const sub = rabbit.createConsumer({
+    queue: "clips",
+    queueOptions: { durable: true, arguments: { "x-queue-type": "quorum", "x-delivery-limit": 5 } },
+    qos: { prefetchCount: 3 },
+    requeue: true,
+}, async (msg) => {
+    const clip = JSON.parse(msg.body) as Clip;
+    console.log(clip);
+    await waitForFullStreamableUpload(clip.url);
+    await sleep(10_000);
+    await discord.sendClipToChannel(clip.url, clip.metadata.channelId, clip.metadata.discordId);
+});
+sub.on("error", (err) => {
+    console.error(`[RabbitMQ] Sub error: ${err}`);
+});
 
-async function downloadDemo(matchId: string): Promise<string> {
-    const matchURL = await matchFetcher.getDemoURLFromMatchId(matchId);
-    const outputFile = path.join(import.meta.dirname, matchURL.substring(matchURL.lastIndexOf('/') + 1, matchURL.length - 4));
-
-    if (!(await exists(outputFile))) {
-        await downloadBZip2(matchURL, outputFile);
-    }
-
-    return outputFile;
-}
-
-async function parseDemo(demoPath: string): Promise<MatchDetails> {
-    const deaths = parseEvent(demoPath, "player_death", [], ["is_warmup_period"]).filter((death: any) => !death.is_warmup_period);
-    const matchDetails: MatchDetails = {};
-
-    for (const death of deaths) {
-        const victim = death.user_steamid;
-        const attacker = death.attacker_steamid;
-
-        if (victim !== null) {
-            if (!(victim in matchDetails)) {
-                matchDetails[victim] = {
-                    kills: [],
-                    deaths: [],
-                };
-            }
-            matchDetails[victim].deaths.push(death.tick);
-        }
-
-        if (attacker !== null) {
-            if (!(attacker in matchDetails)) {
-                matchDetails[attacker] = {
-                    kills: [],
-                    deaths: [],
-                };
-            }
-            matchDetails[attacker].kills.push(death.tick);
-        }
-    }
-
-    return matchDetails;
-}
-
-const users = await db.getUsersAndMatchCodes();
-const matches = await getLatestMatches(users);
-
-for (const match in matches) {
-    const demoFile = await downloadDemo(match);
-    const details = await parseDemo(demoFile);
-
-    console.log(JSON.stringify(details));
-}
+demo.beginPolling();

@@ -1,16 +1,19 @@
 declare interface User {
     steamId: string,
     authCode: string,
-    matchCode: string,
+    matchId: string,
 }
 
-declare interface Matches {
-    [matchCode: string]: string[],
+declare interface MatchesWithUsers {
+    [matchId: string]: string[],
+}
+
+declare interface Match {
+    [steamId: string]: MatchDetails
 }
 
 declare interface MatchDetails {
-    [steamId: string]: {
-        kills: number[],
-        deaths: number[],
-    }
+    username: string,
+    kills: number[],
+    deaths: number[],
 }

@@ -1,5 +1,5 @@
 declare type Demo = {
-    id: string,
+    id?: string,
     url: string,
     clipIntervals: Array<{
         start: number,
@@ -8,9 +8,15 @@ declare type Demo = {
     }>,
     fps: number,
     webhook: string,
+    metadata?: any
 }
 
 declare type MirvMessage = {
     event: string,
     data: any
+}
+
+declare type Clip = {
+    url: string,
+    metadata?: any
 }

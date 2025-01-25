@@ -1,11 +1,25 @@
-import pg from "pg";
-import sql from "sql-template-strings";
+import sql from "./connection";
 
-const pool = new pg.Pool({
-    connectionString: process.env.POSTGRES_URL
-});
+export async function getUsersAndMatchIds() {
+    const usersAndCodes = await sql`SELECT steam_id as "steamId", cs_auth_code as "authCode", match_id as "matchId" FROM users;` as User[];
+    return usersAndCodes;
+}
 
-export async function getUsersAndMatchCodes() {
-    const { rows }: { rows: User[] } = await pool.query(sql`SELECT steam_id as "steamId", cs_auth_code as "authCode", match_code as "matchCode" FROM users;`);
-    return rows;
+export async function upsertNewMatchDetails(steamId: string, matchId: string, matchDetails: MatchDetails) {
+    const stringifiedMatchDetails = JSON.stringify(matchDetails);
+    await sql`INSERT INTO match_data (steam_id, match_id, match_details) VALUES (${steamId}, ${matchId}, ${stringifiedMatchDetails}) ON CONFLICT (steam_id, match_id) DO UPDATE SET match_details = ${stringifiedMatchDetails};`;
+}
+
+export async function updateUserMatchIds(steamId: string, matchId: string) {
+    await sql`UPDATE users SET match_id = ${matchId} WHERE steam_id = ${steamId}`;
+}
+
+export async function getDiscordIdAndChannelForUser(steamId: string) {
+    const rows = await sql`SELECT U.discord_id as "discordId", D.channel_id as "channelId" FROM users as U LEFT JOIN discord_channels as D ON U.steam_id = D.steam_id WHERE D.steam_id = ${steamId};` as { discordId: string, channelId: string }[];
+    return rows[0];
+}
+
+export async function getUserMatchDetails(steamId: string, matchId: string) {
+    const rows = await sql`SELECT match_details as "matchDetails" FROM match_data WHERE steam_id = ${steamId} and match_id = ${matchId}` as { matchDetails: string }[];
+    return JSON.parse(rows[0].matchDetails) as MatchDetails;
 }

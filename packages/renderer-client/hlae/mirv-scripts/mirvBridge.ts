@@ -32,10 +32,12 @@ function waitForRoundStart() {
         mirv.onGameEvent = (e) => {
             if (e.name === "player_info") {
                 const data = JSON.parse(e.data);
+                const steamIdStartIndex = e.data.indexOf("steamid") + 10;
+                const steamId = e.data.substring(steamIdStartIndex, steamIdStartIndex + 17);
 
                 if (!data.bot && 0 <= data.userid && data.userid <= 9) {
                     nameAndSteamIDToUserID[data.name] = data.userid + 1;
-                    nameAndSteamIDToUserID[data.steamid.toString()] = data.userid + 1;
+                    nameAndSteamIDToUserID[steamId] = data.userid + 1;
                 }
             } else if (e.name === "round_poststart") {
                 mirv.message(JSON.stringify(nameAndSteamIDToUserID));
@@ -68,6 +70,7 @@ async function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}) 
     mirv.exec(`cl_drawhud_force_teamid_overhead -1`);
     mirv.exec(`cl_player_ping_mute 2`);
     mirv.exec(`cl_spec_show_bindings false`);
+    mirv.exec(`cl_drawhud_force_radar -1`);
     mirv.exec(`mp_display_kill_assists false`);
     mirv.exec(`mirv_viewmodel enabled 1; mirv_viewmodel set 2 0 -2 68 0`);
     mirv.exec(`r_show_build_info false`);

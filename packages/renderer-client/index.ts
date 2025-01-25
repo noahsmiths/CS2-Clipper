@@ -1,7 +1,7 @@
 import { Connection } from "rabbitmq-client";
 import { HLAE } from "./hlae/HLAE";
 import { parseConfig } from "./utils/parseConfig";
-import { uploadFile } from "./utils/uploadFile";
+import { uploadFile, uploadFileToStreamable } from "./utils/uploadFile";
 import { checkIfValveURL } from "./utils/checkIfValveURL";
 
 const CONFIG_FILE_PATH = "./config.json";
@@ -25,6 +25,12 @@ rabbit.on("connection", () => {
 });
 
 let autoShutdown: Timer;
+const pub = rabbit.createPublisher({
+    // Enable publish confirmations, similar to consumer acknowledgements
+    confirm: true,
+    // Enable retries
+    maxAttempts: 2,
+});
 const sub = rabbit.createConsumer({
     queue: "demos",
     queueOptions: { durable: true, arguments: { "x-queue-type": "quorum", "x-delivery-limit": 5 } },
@@ -52,7 +58,12 @@ const sub = rabbit.createConsumer({
         console.log("Generating clip...");
         const clip = await hlae.generateClip(demo);
         console.log("Uploading file...");
-        await uploadFile(demo.webhook, clip.recordingFile);
+        // await uploadFile(demo.webhook, clip.recordingFile);
+        const url = await uploadFileToStreamable(`${demo.metadata.username}'s Clip`, clip.recordingFile);
+        await pub.send("clips", JSON.stringify({
+            url: url,
+            metadata: demo.metadata
+        } as Clip));
         console.log("File sent! Deleting old demo...");
         hlae.deleteOldestDemos(config.DEMO_CACHE_LIMIT)
             .then((numberDeleted) => {
