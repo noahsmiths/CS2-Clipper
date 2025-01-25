@@ -1,0 +1,7 @@
+{
+    "HLAE_path": "This should be something like C:\\Program Files (x86)\\HLAE",
+    "CS_path": "This should be something like C:\\Program Files (x86)\\Steam\\steamapps\\common\\Counter-Strike Global Offensive\\game",
+    "clip_path": "Some placeholder folder. *NO SPACES* C:\\cs2_clips",
+    "RABBITMQ_URL": "Rabbitmq connection string",
+    "DEMO_CACHE_LIMIT": 5
+}
