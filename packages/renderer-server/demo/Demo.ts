@@ -6,6 +6,7 @@ import { exists } from "shared/utils/exists";
 import { downloadBZip2 } from "shared/utils/BZip2Downloader";
 import { parseEvent } from "@laihoe/demoparser2";
 import * as db from "../db";
+import { unlink } from "node:fs/promises";
 
 export class Demos extends EventEmitter {
     private timeout: Timer | undefined = undefined;
@@ -122,6 +123,7 @@ export class Demos extends EventEmitter {
             }
         }
     
+        await unlink(demoPath);
         return match;
     }
 }
