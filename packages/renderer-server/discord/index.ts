@@ -1,6 +1,7 @@
 import { ActionRowBuilder, ChannelType, Client, Events, GatewayIntentBits, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, type CacheType, type Interaction } from "discord.js";
 import { EventEmitter } from "node:events";
 import { buildClipTypeForm, buildMatchDetailForm } from "./forms";
+import * as db from "../db";
 
 export class Discord extends EventEmitter {
     private client;
@@ -55,6 +56,10 @@ export class Discord extends EventEmitter {
                     content: "Your clip will be ready soon!",
                     flags: "Ephemeral"
                 });
+                if (interaction.channel?.isSendable()) {
+                    const matchDetail = await db.getUserMatchDetails(steamId, matchId);
+                    await interaction.channel.send(`<@${interaction.user.id}> requested ${matchDetail.username}'s ${clipType}s. Coming soon!`);
+                }
                 this.emit("clip-request", steamId, matchId, clipType, interaction.channelId, interaction.user.id);
             }
         }
