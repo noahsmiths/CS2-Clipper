@@ -49,17 +49,21 @@ export class Demos extends EventEmitter {
         const matches = await this.getLatestMatches(users);
 
         for (const matchId in matches) {
-            const demoFile = await this.downloadDemo(matchId);
-            const match = await this.parseDemo(demoFile);
-            const userIds = matches[matchId]; // This is an array of only userIds who use the clipping service
-            
-            for (const userId in match) { // This iterates over ALL people in the match, not just those who use the clipping service
-                // Should prob make the following two lines a transaction
-                await db.upsertNewMatchDetails(userId, matchId, match[userId]);
-                await db.updateUserMatchIds(userId, matchId); // Comment this line out to prevent latest match id's from updating for users
-            }
+            try {
+                const demoFile = await this.downloadDemo(matchId);
+                const match = await this.parseDemo(demoFile);
+                const userIds = matches[matchId]; // This is an array of only userIds who use the clipping service
+                
+                for (const userId in match) { // This iterates over ALL people in the match, not just those who use the clipping service
+                    // Should prob make the following two lines a transaction
+                    await db.upsertNewMatchDetails(userId, matchId, match[userId]);
+                    await db.updateUserMatchIds(userId, matchId); // Comment this line out to prevent latest match id's from updating for users
+                }
 
-            this.emit("new-match", userIds, matchId, match);
+                this.emit("new-match", userIds, matchId, match);
+            } catch (err) {
+                console.error(err);
+            }
         }
     }
 
