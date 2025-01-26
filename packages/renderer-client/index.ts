@@ -47,7 +47,7 @@ const sub = rabbit.createConsumer({
 
         if (!hlae.checkIfConnected()) {
             console.log("CS2 not yet launched. Launching...");
-            await hlae.launch({ width: 1920, height: 1080 });
+            await hlae.launch(config.DEMO_CLIP_RESOLUTION);
             console.log("CS2 Launched");
         }
 

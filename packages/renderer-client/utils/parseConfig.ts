@@ -6,5 +6,15 @@ export async function parseConfig(configPath: string) {
         process.exit(1);
     }
 
-    return await configFile.json();
+    return await configFile.json() as {
+        HLAE_path: string,
+        CS_path: string,
+        clip_path: string,
+        RABBITMQ_URL: string,
+        DEMO_CACHE_LIMIT: number,
+        DEMO_CLIP_RESOLUTION: {
+            width: number,
+            height: number
+        }
+    };
 }
