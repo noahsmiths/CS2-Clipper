@@ -6,10 +6,11 @@ import { exists } from "shared/utils/exists";
 import { downloadBZip2 } from "shared/utils/BZip2Downloader";
 import { parseEvent } from "@laihoe/demoparser2";
 import * as db from "../db";
-import { unlink } from "node:fs/promises";
+import { readdir, unlink } from "node:fs/promises";
 
 export class Demos extends EventEmitter {
     private timeout: Timer | undefined = undefined;
+    private demoDownloadDirectory: string = import.meta.dirname;
 
     constructor(
         private matchFetcher: MatchFetcher,
@@ -19,8 +20,17 @@ export class Demos extends EventEmitter {
         super();
     }
 
+    private async clearDownloadedDemos() {
+        const downloadedDemoFiles = (await readdir(this.demoDownloadDirectory, { withFileTypes: true }))
+            .filter(ent => ent.isFile() && ent.name.endsWith(".dem"))
+            .map(file => path.join(file.parentPath, file.name));
+        const fileDeletions = downloadedDemoFiles.map(filePath => unlink(filePath));
+        await Promise.all(fileDeletions);
+    }
+
     async beginPolling() {
         try {
+            await this.clearDownloadedDemos();
             await this.pollLatestMatches();
         } catch (err) {
             console.error(err);
@@ -83,7 +93,7 @@ export class Demos extends EventEmitter {
     
     private async downloadDemo(matchId: string): Promise<string> {
         const matchURL = await this.matchFetcher.getDemoURLFromMatchId(matchId);
-        const outputFile = path.join(import.meta.dirname, matchURL.substring(matchURL.lastIndexOf('/') + 1, matchURL.length - 4));
+        const outputFile = path.join(this.demoDownloadDirectory, matchURL.substring(matchURL.lastIndexOf('/') + 1, matchURL.length - 4));
     
         if (!(await exists(outputFile))) {
             await downloadBZip2(matchURL, outputFile);
