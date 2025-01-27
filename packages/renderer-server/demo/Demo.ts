@@ -57,7 +57,11 @@ export class Demos extends EventEmitter {
                 for (const userId in match) { // This iterates over ALL people in the match, not just those who use the clipping service
                     // Should prob make the following two lines a transaction
                     await db.upsertNewMatchDetails(userId, matchId, match[userId]);
-                    await db.updateUserMatchIds(userId, matchId); // Comment this line out to prevent latest match id's from updating for users
+
+                    // Only update the user match id if the userId is in the userIds array. Without this check, older demo checks for users can affect users with newer matches if they played a common one before
+                    if (userId in userIds) {
+                        await db.updateUserMatchIds(userId, matchId); // Comment this line out to prevent latest match id's from updating for users
+                    }
                 }
 
                 this.emit("new-match", userIds, matchId, match);
