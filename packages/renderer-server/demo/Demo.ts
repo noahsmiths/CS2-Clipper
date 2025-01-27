@@ -59,7 +59,7 @@ export class Demos extends EventEmitter {
                     await db.upsertNewMatchDetails(userId, matchId, match[userId]);
 
                     // Only update the user match id if the userId is in the userIds array. Without this check, older demo checks for users can affect users with newer matches if they played a common one before
-                    if (userId in userIds) {
+                    if (userIds.includes(userId)) {
                         await db.updateUserMatchIds(userId, matchId); // Comment this line out to prevent latest match id's from updating for users
                     }
                 }
