@@ -63,7 +63,8 @@ async function recordClip({demo, outputPath}: {demo: Demo, outputPath: string}) 
     // mirv.exec(`mirv_streams settings edit blur fps ${demo.fps}`);
     // mirv.exec(`mirv_streams record fps ${demo.fps * 10}`);
     // mirv.exec(`mirv_streams record screen settings blur`);
-    mirv.exec(`mirv_streams record screen settings afxFfmpeg`);
+    mirv.exec(`mirv_streams settings add ffmpeg gpuEncoding "-c:v h264_nvenc -preset slow -cq 19 {QUOTE}{AFX_STREAM_PATH}\\\\video.mp4{QUOTE}"`);
+    mirv.exec(`mirv_streams record screen settings gpuEncoding`);
     mirv.exec(`cl_draw_only_deathnotices true`);
     mirv.exec(`spec_show_xray 0`);
     mirv.exec(`snd_setmixer Dialog vol 0`);
