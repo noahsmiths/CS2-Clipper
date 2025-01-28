@@ -15,6 +15,7 @@ export async function parseConfig(configPath: string) {
         DEMO_CLIP_RESOLUTION: {
             width: number,
             height: number
-        }
+        },
+        SHUTDOWN_CS_AFTER_MS: number
     };
 }

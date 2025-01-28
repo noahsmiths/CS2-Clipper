@@ -76,9 +76,9 @@ const sub = rabbit.createConsumer({
         throw err;
     } finally {
         autoShutdown = setTimeout(() => {
-            console.log("No new clip request in last 5 minutes. Going to shutdown.");
+            console.log(`No new clip request in last ${(config.SHUTDOWN_CS_AFTER_MS / 60_000).toFixed(2)} minutes. Going to shutdown.`);
             shutdown();
-        }, 300_000); // Auto-restart in 5 minutes. Process will be restarted, but CS2 will remain closed until new clip request.
+        }, config.SHUTDOWN_CS_AFTER_MS); // Auto-shutdown after timeout. Process will be restarted, but CS2 will remain closed until new clip request.
     }
 });
 
