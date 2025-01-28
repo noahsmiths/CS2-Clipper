@@ -8,6 +8,8 @@ const CONFIG_FILE_PATH = "./config.json";
 const config = await parseConfig(CONFIG_FILE_PATH);
 const hlae = new HLAE(config.HLAE_path, config.CS_path, config.clip_path);
 
+console.log(`----------- Process started. Timestamp: ${Date.now()} -----------`);
+
 console.log("Closing old CS2 instance if it exists...");
 await hlae.exitCS2();
 await Bun.sleep(2000);
