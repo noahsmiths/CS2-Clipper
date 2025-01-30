@@ -47,6 +47,7 @@ export class Demos extends EventEmitter {
     async pollLatestMatches() {
         const users = await db.getUsersAndMatchIds();
         const matches = await this.getLatestMatches(users);
+        console.log(`Found new matches ${Object.keys(matches)}`);
 
         for (const matchId in matches) {
             try {

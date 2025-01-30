@@ -11,7 +11,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@laihoe/demoparser2": "^0.33.1",
+    "@laihoe/demoparser2": "^0.35.0",
     "axios": "^1.7.9",
     "discord.js": "^14.17.3",
     "dotenv": "^16.4.7",
