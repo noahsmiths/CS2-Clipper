@@ -37,6 +37,10 @@ export function buildClipTypeForm(steamId: string, matchId: string): BaseMessage
                 .setLabel("Lowlight")
                 .setDescription("Watch this person shit the bed!")
                 .setValue(`${steamId};${matchId};lowlight`),
+            new StringSelectMenuOptionBuilder()
+                .setLabel("Highlight From Enemy POV")
+                .setDescription("Watch this person's kills from the enemy POV. Or in other words, watch them shit the bed!")
+                .setValue(`${steamId};${matchId};highlight-enemy-pov`),
         );
     
     const row = new ActionRowBuilder<StringSelectMenuBuilder>()

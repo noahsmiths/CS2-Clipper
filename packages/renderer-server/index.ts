@@ -6,6 +6,7 @@ import { Demos } from './demo/Demo';
 import { Discord } from './discord';
 import { Connection } from 'rabbitmq-client';
 import axios from 'axios';
+import { calculateHighlightsFromEnemyPOV, calculateIntervals } from './clip-request-generators';
 
 const matchFetcher = await MatchFetcher.createMatchFetcher();
 // const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
@@ -54,35 +55,6 @@ demo.on("new-match", async (userIds, matchId, match) => {
     }
 });
 
-function calculateIntervals(timestamps: number[], steamId: string): { start: number, end: number, playerName: string }[] {
-    const STARTING_OFFSET_TICKS = 3 * 64; // 2 seconds converted to ticks
-    const ENDING_OFFSET_TICKS = 3 * 64;
-    const PRE_KILL_OFFSET = 2 * 64;
-    const POST_KILL_OFFSET = 2 * 64;
-    const MAX_TICKS_BETWEEN_KILLS = 6 * 64; // If kills are within 6 seconds of each other, don't stop filming between
-    const intervals: { start: number, end: number, playerName: string }[] = [];
-
-    // timestamps.sort(); // Might be needed to get kills in correct order
-
-    for (let i = 0; i < timestamps.length; i++) {
-        const beforeOffset = i === 0 ? STARTING_OFFSET_TICKS : PRE_KILL_OFFSET;
-        const afterOffset = i === timestamps.length - 1 ? ENDING_OFFSET_TICKS : POST_KILL_OFFSET;
-
-        const currentTime = timestamps[i];
-        if (currentTime - timestamps[i - 1] < MAX_TICKS_BETWEEN_KILLS) { // Kills are within MAX_TICKS_BETWEEN_KILLS of each other
-            intervals[intervals.length - 1].end = currentTime + afterOffset;
-        } else {
-            intervals.push({
-                start: currentTime - beforeOffset,
-                end: currentTime + afterOffset,
-                playerName: steamId
-            });
-        }
-    }
-
-    return intervals;
-}
-
 discord.on("clip-request", async (steamId, matchId, clipType, channelId, discordId) => {
     console.log("clip-request-received");
     const url = await matchFetcher.getDemoURLFromMatchId(matchId);
@@ -93,6 +65,8 @@ discord.on("clip-request", async (steamId, matchId, clipType, channelId, discord
         intervals = calculateIntervals(matchDetails.kills, steamId);
     } else if (clipType === "lowlight") {
         intervals = calculateIntervals(matchDetails.deaths, steamId);
+    } else if (clipType === "highlight-enemy-pov") {
+        intervals = calculateHighlightsFromEnemyPOV(matchDetails, steamId);
     } else {
         throw new Error(`clipType ${clipType} unsupported`);
     }

@@ -15,5 +15,7 @@ declare interface Match {
 declare interface MatchDetails {
     username: string,
     kills: number[],
+    victims: string[],
     deaths: number[],
+    attackers: string[],
 }

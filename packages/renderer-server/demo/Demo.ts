@@ -47,7 +47,10 @@ export class Demos extends EventEmitter {
     async pollLatestMatches() {
         const users = await db.getUsersAndMatchIds();
         const matches = await this.getLatestMatches(users);
-        console.log(`Found new matches ${Object.keys(matches)}`);
+        
+        if (Object.keys(matches).length > 0) {
+            console.log(`Found new matches ${Object.keys(matches)}`);
+        }
 
         for (const matchId in matches) {
             try {
@@ -124,10 +127,13 @@ export class Demos extends EventEmitter {
                     match[victim] = {
                         username: death.user_name,
                         kills: [],
+                        victims: [],
                         deaths: [],
+                        attackers: [],
                     };
                 }
                 match[victim].deaths.push(death.tick);
+                match[victim].attackers.push(attacker)
             }
     
             if (attacker !== null) {
@@ -135,10 +141,13 @@ export class Demos extends EventEmitter {
                     match[attacker] = {
                         username: death.attacker_name,
                         kills: [],
+                        victims: [],
                         deaths: [],
+                        attackers: [],
                     };
                 }
                 match[attacker].kills.push(death.tick);
+                match[attacker].victims.push(victim);
             }
         }
     
