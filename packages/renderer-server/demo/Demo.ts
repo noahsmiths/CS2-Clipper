@@ -4,7 +4,7 @@ import { sleep } from "../utils/sleep";
 import path from "node:path";
 import { exists } from "shared/utils/exists";
 import { downloadBZip2 } from "shared/utils/BZip2Downloader";
-import { parseEvent } from "@laihoe/demoparser2";
+import { parseEvents, parseHeader } from "@laihoe/demoparser2";
 import * as db from "../db";
 import { readdir, unlink } from "node:fs/promises";
 
@@ -55,20 +55,19 @@ export class Demos extends EventEmitter {
         for (const matchId in matches) {
             try {
                 const demoFile = await this.downloadDemo(matchId);
-                const match = await this.parseDemo(demoFile);
+                const matchDetails = await this.parseDemo(demoFile);
                 const userIds = matches[matchId]; // This is an array of only userIds who use the clipping service
                 
-                for (const userId in match) { // This iterates over ALL people in the match, not just those who use the clipping service
-                    // Should prob make the following two lines a transaction
-                    await db.upsertNewMatchDetails(userId, matchId, match[userId]);
+                await db.upsertNewMatchDetails(matchId, matchDetails);
 
+                for (const userId in matchDetails.usernames) { // This iterates over ALL people in the match, not just those who use the clipping service
                     // Only update the user match id if the userId is in the userIds array. Without this check, older demo checks for users can affect users with newer matches if they played a common one before
                     if (userIds.includes(userId)) {
                         await db.updateUserMatchIds(userId, matchId); // Comment this line out to prevent latest match id's from updating for users
                     }
                 }
 
-                this.emit("new-match", userIds, matchId, match);
+                this.emit("new-match", userIds, matchId, matchDetails);
             } catch (err) {
                 console.error(err);
             }
@@ -114,44 +113,41 @@ export class Demos extends EventEmitter {
         return outputFile;
     }
     
-    private async parseDemo(demoPath: string): Promise<Match> {
-        const deaths = parseEvent(demoPath, "player_death", [], ["is_warmup_period"]).filter((death: any) => !death.is_warmup_period);
-        const match: Match = {};
+    private async parseDemo(demoPath: string): Promise<MatchDetails> {
+        const header = parseHeader(demoPath);
+        const allEvents = parseEvents(demoPath, ["player_death"], [], ["is_warmup_period"]).filter((event: any) => !event.is_warmup_period);
+        const deaths = allEvents.filter((event: any) => event.event_name === 'player_death');
+        const matchDetails: MatchDetails = {
+            usernames: {},
+            kills: {},
+            deaths: {},
+            map: header.map_name,
+            winningSteamIDs: [],
+            losingSteamIDs: [],
+        };
     
         for (const death of deaths) {
             const victim = death.user_steamid;
             const attacker = death.attacker_steamid;
     
             if (victim !== null) {
-                if (!(victim in match)) {
-                    match[victim] = {
-                        username: death.user_name,
-                        kills: [],
-                        victims: [],
-                        deaths: [],
-                        attackers: [],
-                    };
+                if (matchDetails.deaths[victim] === undefined) {
+                    matchDetails.deaths[victim] = [];
                 }
-                match[victim].deaths.push(death.tick);
-                match[victim].attackers.push(attacker)
+                matchDetails.usernames[victim] = death.user_name;
+                matchDetails.deaths[victim].push([attacker, death.tick]);
             }
     
             if (attacker !== null) {
-                if (!(attacker in match)) {
-                    match[attacker] = {
-                        username: death.attacker_name,
-                        kills: [],
-                        victims: [],
-                        deaths: [],
-                        attackers: [],
-                    };
+                if (matchDetails.kills[attacker] === undefined) {
+                    matchDetails.kills[attacker] = [];
                 }
-                match[attacker].kills.push(death.tick);
-                match[attacker].victims.push(victim);
+                matchDetails.usernames[attacker] = death.attacker_name;
+                matchDetails.kills[attacker].push([victim, death.tick]);
             }
         }
     
         await unlink(demoPath);
-        return match;
+        return matchDetails;
     }
 }

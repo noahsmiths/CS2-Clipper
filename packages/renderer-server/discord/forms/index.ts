@@ -1,16 +1,17 @@
 import { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, type BaseMessageOptions } from "discord.js";
 
-export function buildMatchDetailForm(matchId: string, match: Match, discordIds: string[]): BaseMessageOptions {
+export function buildMatchDetailForm(matchId: string, matchDetails: MatchDetails, discordIds: string[]): BaseMessageOptions {
     const select = new StringSelectMenuBuilder()
         .setCustomId("user_select")
         .setPlaceholder("Choose who to clip!")
         .addOptions(
-            ...Object.keys(match).map(steamId => {
-                const stats = match[steamId];
+            ...Object.keys(matchDetails.usernames).map(steamId => {
+                const kills = matchDetails.kills[steamId];
+                const deaths = matchDetails.deaths[steamId];
 
                 return new StringSelectMenuOptionBuilder()
-                    .setLabel(stats.username)
-                    .setDescription(`K/D: ${stats.kills.length}/${stats.deaths.length}`)
+                    .setLabel(matchDetails.usernames[steamId])
+                    .setDescription(`K/D: ${kills.length}/${deaths.length}`)
                     .setValue(`${steamId};${matchId}`);
             })
         );

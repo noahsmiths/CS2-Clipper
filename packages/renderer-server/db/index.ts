@@ -5,9 +5,9 @@ export async function getUsersAndMatchIds() {
     return usersAndCodes;
 }
 
-export async function upsertNewMatchDetails(steamId: string, matchId: string, matchDetails: MatchDetails) {
+export async function upsertNewMatchDetails(matchId: string, matchDetails: MatchDetails) {
     const stringifiedMatchDetails = JSON.stringify(matchDetails);
-    await sql`INSERT INTO match_data (steam_id, match_id, match_details) VALUES (${steamId}, ${matchId}, ${stringifiedMatchDetails}) ON CONFLICT (steam_id, match_id) DO UPDATE SET match_details = ${stringifiedMatchDetails};`;
+    await sql`INSERT INTO match_data (match_id, match_details) VALUES (${matchId}, ${stringifiedMatchDetails}) ON CONFLICT (match_id) DO UPDATE SET match_details = ${stringifiedMatchDetails};`;
 }
 
 export async function updateUserMatchIds(steamId: string, matchId: string) {
@@ -19,7 +19,7 @@ export async function getDiscordIdAndChannelForUser(steamId: string) {
     return rows;
 }
 
-export async function getUserMatchDetails(steamId: string, matchId: string) {
-    const rows = await sql`SELECT match_details as "matchDetails" FROM match_data WHERE steam_id = ${steamId} and match_id = ${matchId}` as { matchDetails: string }[];
+export async function getMatchDetails(matchId: string) {
+    const rows = await sql`SELECT match_details as "matchDetails" FROM match_data WHERE match_id = ${matchId}` as { matchDetails: string }[];
     return JSON.parse(rows[0].matchDetails) as MatchDetails;
 }

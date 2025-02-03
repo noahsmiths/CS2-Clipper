@@ -23,10 +23,10 @@ export class Discord extends EventEmitter {
         this.client = client;
     }
 
-    async sendMatchToChannel(channelId: string, matchId: string, match: Match, discordIds: string[]) {
+    async sendMatchToChannel(channelId: string, matchId: string, matchDetails: MatchDetails, discordIds: string[]) {
         const channel = await this.client.channels.fetch(channelId);
         if (channel?.type === ChannelType.GuildText) {
-            const message = buildMatchDetailForm(matchId, match, discordIds);
+            const message = buildMatchDetailForm(matchId, matchDetails, discordIds);
             channel.send(message);
         } else {
             throw new Error(`Channel ID: ${channelId} is of type ${channel?.type}, not GuildText`);
@@ -57,8 +57,8 @@ export class Discord extends EventEmitter {
                     flags: "Ephemeral"
                 });
                 if (interaction.channel?.isSendable()) {
-                    const matchDetail = await db.getUserMatchDetails(steamId, matchId);
-                    await interaction.channel.send(`<@${interaction.user.id}> requested ${matchDetail.username}'s ${clipType}s. Coming soon!`);
+                    const matchDetail = await db.getMatchDetails(matchId);
+                    await interaction.channel.send(`<@${interaction.user.id}> requested ${matchDetail.usernames[steamId]}'s ${clipType}s. Coming soon!`);
                 }
                 this.emit("clip-request", steamId, matchId, clipType, interaction.channelId, interaction.user.id);
             }

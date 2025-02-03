@@ -8,14 +8,11 @@ declare interface MatchesWithUsers {
     [matchId: string]: string[],
 }
 
-declare interface Match {
-    [steamId: string]: MatchDetails
-}
-
 declare interface MatchDetails {
-    username: string,
-    kills: number[],
-    victims: string[],
-    deaths: number[],
-    attackers: string[],
+    usernames: { [steamID: string] : string },
+    kills: { [steamID: string]: [victimSteamID: string, tick: number][] },
+    deaths: { [steamID: string]: [attackerSteamID: string, tick: number][] },
+    map: string,
+    winningSteamIDs: number[],
+    losingSteamIDs: number[],
 }

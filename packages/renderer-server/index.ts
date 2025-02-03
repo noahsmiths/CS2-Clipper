@@ -58,13 +58,13 @@ demo.on("new-match", async (userIds, matchId, match) => {
 discord.on("clip-request", async (steamId, matchId, clipType, channelId, discordId) => {
     console.log("clip-request-received");
     const url = await matchFetcher.getDemoURLFromMatchId(matchId);
-    const matchDetails = await db.getUserMatchDetails(steamId, matchId);
+    const matchDetails = await db.getMatchDetails(matchId);
 
     let intervals: { start: number, end: number, playerName: string }[] = [];
     if (clipType === "highlight") {
-        intervals = calculateIntervals(matchDetails.kills, steamId);
+        intervals = calculateIntervals(matchDetails.kills[steamId].map(el => el[1]), steamId);
     } else if (clipType === "lowlight") {
-        intervals = calculateIntervals(matchDetails.deaths, steamId);
+        intervals = calculateIntervals(matchDetails.deaths[steamId].map(el => el[1]), steamId);
     } else if (clipType === "highlight-enemy-pov") {
         intervals = calculateHighlightsFromEnemyPOV(matchDetails, steamId);
     } else {
@@ -77,7 +77,7 @@ discord.on("clip-request", async (steamId, matchId, clipType, channelId, discord
         fps: 60,
         webhook: "",
         metadata: {
-            username: matchDetails.username,
+            username: matchDetails.usernames[steamId],
             channelId,
             discordId,
         }
