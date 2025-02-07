@@ -1,7 +1,7 @@
 import { Connection } from "rabbitmq-client";
 import { HLAE } from "./hlae/HLAE";
 import { parseConfig } from "./utils/parseConfig";
-import { uploadFile, uploadFileToStreamable } from "./utils/uploadFile";
+import { createS3MP4Uploader, uploadFile, uploadFileToStreamable } from "./utils/uploadFile";
 import { checkIfValveURL } from "./utils/checkIfValveURL";
 
 const CONFIG_FILE_PATH = "./config.json";
@@ -17,6 +17,7 @@ await Bun.sleep(2000);
 // console.log("Launching CS2 with HLAE...");
 // await hlae.launch({ width: 1920, height: 1080 });
 // console.log("CS2 Launched");
+const uploadToBlazebackBucket = createS3MP4Uploader(config.S3_BUCKET.CREDENTIALS.ACCESS_KEY_ID, config.S3_BUCKET.CREDENTIALS.SECRET_ACCESS_KEY, config.S3_BUCKET.CREDENTIALS.ENDPOINT, config.S3_BUCKET.CREDENTIALS.BUCKET);
 
 const rabbit = new Connection(config.RABBITMQ_URL);
 rabbit.on("error", (err) => {
@@ -61,7 +62,8 @@ const sub = rabbit.createConsumer({
         const clip = await hlae.generateClip(demo);
         console.log("Uploading file...");
         // await uploadFile(demo.webhook, clip.recordingFile);
-        const url = await uploadFileToStreamable(`${demo.metadata.username}'s Clip`, clip.recordingFile);
+        // const url = await uploadFileToStreamable(`${demo.metadata.username}'s Clip`, clip.recordingFile);
+        const url = config.S3_BUCKET.PUBLIC_URL + await uploadToBlazebackBucket(clip.recordingFile);
         await pub.send("clips", JSON.stringify({
             url: url,
             metadata: demo.metadata

@@ -16,6 +16,15 @@ export async function parseConfig(configPath: string) {
             width: number,
             height: number
         },
-        SHUTDOWN_CS_AFTER_MS: number
+        SHUTDOWN_CS_AFTER_MS: number,
+        S3_BUCKET: {
+            CREDENTIALS: {
+                ACCESS_KEY_ID: string,
+                SECRET_ACCESS_KEY: string,
+                ENDPOINT: string,
+                BUCKET: string,
+            },
+            PUBLIC_URL: string
+        }
     };
 }

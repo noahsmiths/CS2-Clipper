@@ -113,8 +113,8 @@ const sub = rabbit.createConsumer({
 }, async (msg) => {
     const clip = JSON.parse(msg.body) as Clip;
     console.log(clip);
-    await waitForFullStreamableUpload(clip.url);
-    await sleep(10_000);
+    // await waitForFullStreamableUpload(clip.url);
+    // await sleep(10_000);
     await discord.sendClipToChannel(clip.url, clip.metadata.channelId, clip.metadata.discordId);
 });
 sub.on("error", (err) => {

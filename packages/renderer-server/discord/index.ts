@@ -36,7 +36,7 @@ export class Discord extends EventEmitter {
     async sendClipToChannel(url: string, channelId: string, discordId: string) {
         const channel = await this.client.channels.fetch(channelId);
         if (channel?.type === ChannelType.GuildText) {
-            channel.send(`Clip generated <@${discordId}>! ${url}`);
+            channel.send(`Clip generated <@${discordId}>! [Link here](${url})`);
         } else {
             throw new Error(`Channel ID: ${channelId} is of type ${channel?.type}, not GuildText`);
         }

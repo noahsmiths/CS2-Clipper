@@ -52,3 +52,19 @@ export async function uploadFileToStreamable(uploadName: string, filepath: strin
     
     return res.data.video.url;
 }
+
+export function createS3MP4Uploader(accessKeyId: string, secretAccessKey: string, endpoint: string, bucket: string) {
+    return async function(filepath: string) {
+        const client = new Bun.S3Client({
+            accessKeyId,
+            secretAccessKey,
+            bucket,
+            endpoint
+        });
+
+        const generatedFileName = Bun.randomUUIDv7() + ".mp4";
+        await client.write(generatedFileName, Bun.file(filepath));
+
+        return generatedFileName;
+    }
+}
