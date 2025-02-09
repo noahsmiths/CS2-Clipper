@@ -4,7 +4,7 @@ import fs from "node:fs";
 
 export function downloadBZip2(url: string, destinationPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
-        http.get(url, (response) => {
+        http.get(url, { timeout: 10_000 }, (response) => {
             const writeStream = fs.createWriteStream(destinationPath, { flags: "w", autoClose: true, flush: true });
             const bz2Stream = bz2();
 
