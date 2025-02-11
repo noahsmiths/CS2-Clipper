@@ -27,7 +27,7 @@ export class Discord extends EventEmitter {
         const channel = await this.client.channels.fetch(channelId);
         if (channel?.type === ChannelType.GuildText) {
             const message = buildMatchDetailForm(matchId, matchDetails, discordIds);
-            channel.send(message);
+            await channel.send(message);
         } else {
             throw new Error(`Channel ID: ${channelId} is of type ${channel?.type}, not GuildText`);
         }
@@ -36,7 +36,16 @@ export class Discord extends EventEmitter {
     async sendClipToChannel(url: string, channelId: string, discordId: string) {
         const channel = await this.client.channels.fetch(channelId);
         if (channel?.type === ChannelType.GuildText) {
-            channel.send(`Clip generated <@${discordId}>! [Link here](${url})`);
+            await channel.send(`Clip generated <@${discordId}>! [Link here](${url})`);
+        } else {
+            throw new Error(`Channel ID: ${channelId} is of type ${channel?.type}, not GuildText`);
+        }
+    }
+
+    async sendClipRequestConfirmationToChannel(discordId: string, channelId: string, steamUsername: string, clipType: string) {
+        const channel = await this.client.channels.fetch(channelId);
+        if (channel?.type === ChannelType.GuildText) {
+            await channel.send(`<@${discordId}> requested ${steamUsername}'s ${clipType}s. Coming soon!`);
         } else {
             throw new Error(`Channel ID: ${channelId} is of type ${channel?.type}, not GuildText`);
         }
@@ -52,15 +61,11 @@ export class Discord extends EventEmitter {
                 });
             } else if (interaction.customId === "clip_type") {
                 const [steamId, matchId, clipType] = interaction.values[0].split(";");
-                await interaction.reply({
-                    content: "Your clip will be ready soon!",
-                    flags: "Ephemeral"
-                });
-                if (interaction.channel?.isSendable()) {
-                    const matchDetail = await db.getMatchDetails(matchId);
-                    await interaction.channel.send(`<@${interaction.user.id}> requested ${matchDetail.usernames[steamId]}'s ${clipType}s. Coming soon!`);
+                const defferedReply = await interaction.deferReply();
+                const reply = async function(content: string) {
+                    await defferedReply.edit(content);
                 }
-                this.emit("clip-request", steamId, matchId, clipType, interaction.channelId, interaction.user.id);
+                this.emit("clip-request", steamId, matchId, clipType, interaction.channelId, interaction.guildId || "no_server", interaction.user.id, reply);
             }
         }
     }

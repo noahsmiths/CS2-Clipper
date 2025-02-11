@@ -55,8 +55,16 @@ demo.on("new-match", async (userIds, matchId, match) => {
     }
 });
 
-discord.on("clip-request", async (steamId, matchId, clipType, channelId, discordId) => {
+discord.on("clip-request", async (steamId, matchId, clipType, channelId, serverId, discordId, reply) => {
     console.log("clip-request-received");
+    const extraClipData = [steamId, clipType].join(";");
+
+    const clipURL = await db.getClipURL(matchId, extraClipData);
+    if (clipURL !== null) {
+        await reply(`Clip generated <@${discordId}>! [Link here](${clipURL})`);
+        return;
+    }
+
     const url = await matchFetcher.getDemoURLFromMatchId(matchId);
     const matchDetails = await db.getMatchDetails(matchId);
 
@@ -71,6 +79,13 @@ discord.on("clip-request", async (steamId, matchId, clipType, channelId, discord
         throw new Error(`clipType ${clipType} unsupported`);
     }
 
+    const clipRequestId = await db.insertClipRequest(matchId, extraClipData, discordId, serverId, channelId, 2);
+    if (clipRequestId !== null) {
+        await reply(`<@${discordId}> requested ${matchDetails.usernames[steamId]}'s ${clipType}s. Coming soon!`);
+    } else {
+        await reply(`Uh oh <@${discordId}>, looks like you have too many pending clip requests! Try again later once some have completed.`);
+    }
+
     const payload: Demo = {
         url: url,
         clipIntervals: intervals,
@@ -78,8 +93,8 @@ discord.on("clip-request", async (steamId, matchId, clipType, channelId, discord
         webhook: "",
         metadata: {
             username: matchDetails.usernames[steamId],
-            channelId,
-            discordId,
+            matchId,
+            extraClipData,
         }
     };
     await pub.send("demos", JSON.stringify(payload));
@@ -115,7 +130,12 @@ const sub = rabbit.createConsumer({
     console.log(clip);
     // await waitForFullStreamableUpload(clip.url);
     // await sleep(10_000);
-    await discord.sendClipToChannel(clip.url, clip.metadata.channelId, clip.metadata.discordId);
+    await db.updateClip(clip.metadata.matchId, clip.metadata.extraClipData, clip.url);
+
+    const clipRequests = await db.getClipRequestsForMatch(clip.metadata.matchId, clip.metadata.extraClipData);
+    for (const request of clipRequests) {
+        await discord.sendClipToChannel(clip.url, request.channelId, request.discordId);
+    }
 });
 sub.on("error", (err) => {
     console.error(`[RabbitMQ] Sub error: ${err}`);
